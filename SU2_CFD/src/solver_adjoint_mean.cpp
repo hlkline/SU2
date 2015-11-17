@@ -4558,10 +4558,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           /*If there is no objective term defined on the outlet, all Psi are 0 (inviscid case) */
           Vn_Exit = Vn; /* Vn_Exit comes from Reiman conditions in subsonic case*/
           Vn_rel = Vn_Exit-ProjGridVel;
-          /*-- Some common terms --*/
-          a1 = SoundSpeed*SoundSpeed/(Vn_rel)/Gamma_Minus_One;
-          a4 = Density*Vn_rel*(pow(SoundSpeed,2.0)-pow(Vn_rel,2.0));
-          
+
           /*--- Objective-dependent additions to energy term ---*/
           switch (config->GetKind_ObjFunc()){
             case OUTLET_CHAIN_RULE:
@@ -4569,7 +4566,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
               for (iDim=0; iDim<nDim; iDim++) velgrad += UnitNormal[iDim]*config->GetCoeff_ObjChainRule(iDim+1)*Area;
               densgrad = config->GetCoeff_ObjChainRule(0)*Area;
               pressgrad = config->GetCoeff_ObjChainRule(4)*Area;
-              Psi_outlet[nDim+1]= (Gamma_Minus_One*Mach_Exit_Normal/(pow(Mach_Exit_Normal,2.0)-1)/SoundSpeed)*
+              Psi_outlet[nDim+1]= (Gamma_Minus_One*Mach_Exit_Normal/(pow(Mach_Exit_Normal,2.0)-Gamma)/SoundSpeed)*
                   (pressgrad-velgrad/Density/Vn_rel+densgrad/pow(Vn_rel,2.0));
               break;
             case AVG_TOTAL_PRESSURE:
@@ -4580,12 +4577,12 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
               for (iDim = 0; iDim < nDim; iDim++) {
                 Velocity2 += Velocity[iDim]*Velocity[iDim];
               }
-              Psi_outlet[nDim+1]+=Gamma_Minus_One*Velocity2/(Vn_rel*SoundSpeed*(pow(Vn_rel,2.0)-pow(SoundSpeed,2.0)));
+              Psi_outlet[nDim+1]+=Gamma_Minus_One*Velocity2/(Vn_rel*SoundSpeed*(pow(Vn_rel,2.0)-pow(SoundSpeed,2.0)*Gamma));
               break;
             case AVG_OUTLET_PRESSURE:
               /*Area averaged static pressure*/
               /*--- Note: further terms are NOT added later for this case, only energy term is modified ---*/
-              Psi_outlet[nDim+1]+=Gamma_Minus_One*Vn_rel/(pow(Vn_rel,2.0)-pow(SoundSpeed,2.0));
+              Psi_outlet[nDim+1]+=Gamma_Minus_One*Vn_rel/(pow(Vn_rel,2.0)-pow(SoundSpeed,2.0)*Gamma);
               break;
             default:
               break;
@@ -4635,7 +4632,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         /*--- This occurs when subsonic, or for certain objective functions ---*/
         if ( Psi_outlet[nVar-1]!=0.0 ){
           /*--- Shorthand for repeated term in the boundary conditions ---*/
-          a1 = SoundSpeed*SoundSpeed/(Vn_rel)/Gamma_Minus_One;
+          a1 = Gamma*SoundSpeed*SoundSpeed/(Vn_rel)/Gamma_Minus_One;
           Psi_outlet[0] += Psi_outlet[nVar-1]*(Velocity2*0.5+Vn_Exit*a1);
           for (iDim = 0; iDim < nDim; iDim++) {
             Psi_outlet[iDim+1] += -Psi_outlet[nVar-1]*(a1*UnitNormal[iDim] + Velocity[iDim]);
