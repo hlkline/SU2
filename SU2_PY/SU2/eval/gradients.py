@@ -90,7 +90,7 @@ def gradient( func_name, method, config, state=None ):
                 import downstream_function
                 chaingrad = downstream_function.downstream_gradient(config,state)
                 # Set coefficients for gradients
-                config.OBJ_CHAIN_RULE_COEFF = str(chaingrad)
+                config.OBJ_CHAIN_RULE_COEFF = str(chaingrad[0:5])
                 
             # Aerodynamics
             if func_name in su2io.optnames_aero:
@@ -117,8 +117,19 @@ def gradient( func_name, method, config, state=None ):
         else:
             raise Exception , 'unrecognized gradient method'
 
+        if ('OTHER' in config.DV_KIND):
+            import downstream_function
+            chaingrad = downstream_function.downstream_gradient(config,state)
+            n_dv = len(grads[func_name])
+            custom_dv=1
+            for idv in range(n_dv):
+                if (config.DV_KIND[idv] == 'OTHER'):
+                    grads[func_name][idv] = chaingrad[4+custom_dv]
+                    custom_dv = custom_dv+1
+
         # store
         state['GRADIENTS'].update(grads)
+        
 
     # if not redundant
 

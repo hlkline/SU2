@@ -3959,6 +3959,7 @@ void CConfig::SetOutput(unsigned short val_software, unsigned short val_izone) {
             (Design_Variable[iDV] ==  FFD_TWIST_ANGLE) ||
             (Design_Variable[iDV] ==  FFD_ROTATION) ||
             (Design_Variable[iDV] ==  FFD_CONTROL_SURFACE) ) nParamDV = 7;
+        if (Design_Variable[iDV] ==  FFD_CONTROL_SURFACE) nParamDV = 1;
 
         for (unsigned short iParamDV = 0; iParamDV < nParamDV; iParamDV++) {
 

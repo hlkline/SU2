@@ -1887,7 +1887,7 @@ public:
 
 	/*!
 	 * \author H. Kline
-	 * \brief Set the total back pressure sensitivity coefficient.
+	 * \brief Get the total back pressure sensitivity coefficient.
 	 * \return Value of the back pressure sensitivity coefficient
 	 *         (inviscid + viscous contribution).
 	 */
@@ -8137,7 +8137,7 @@ public:
 
   /*!
    * \author H. Kline
-   * \brief Set the total Back pressure sensitivity coefficient.
+   * \brief Get the total Back pressure sensitivity coefficient.
    * \return Value of the Back sensitivity coefficient
    *         (inviscid + viscous contribution).
    */
