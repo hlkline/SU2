@@ -101,7 +101,7 @@ def continuous_adjoint( filename           ,
         import downstream_function # Must be defined in run folder
         chaingrad = downstream_function.downstream_gradient(config,state,step)
         # Set coefficients for gradients
-        config.OBJ_CHAIN_RULE_COEFF = str(chaingrad)
+        config.OBJ_CHAIN_RULE_COEFF = str(chaingrad[0:5])
     
     # Adjoint Solution
     if compute:

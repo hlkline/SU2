@@ -2,7 +2,7 @@
  * \file solution_adjoint_mean.cpp
  * \brief Main subrotuines for solving adjoint problems (Euler, Navier-Stokes, etc.).
  * \author F. Palacios, T. Economon
- * \version 4.0.1 "Cardinal"
+ * \version 4.0.2 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -2335,10 +2335,11 @@ void CAdjEulerSolver::Inviscid_Sensitivity(CGeometry *geometry, CSolver **solver
   LevelSet, Target_LevelSet, eps, r, ru, rv, rw, rE, p, T, dp_dr, dp_dru, dp_drv,
   dp_drw, dp_drE, dH_dr, dH_dru, dH_drv, dH_drw, dH_drE, H, *USens, D[3][3], Dd[3], scale = 1.0;
   su2double RefVel2, RefDensity, Mach2Vel, *Velocity_Inf, factor;
-  su2double Velocity2, Mach, SoundSpeed, Velocity[nDim];
+  su2double Velocity2, Mach, SoundSpeed, *Velocity;
   
   USens = new su2double[nVar];
-  
+  Velocity = new su2double[nDim];
+
   su2double Gas_Constant    = config->GetGas_ConstantND();
   bool compressible      = (config->GetKind_Regime() == COMPRESSIBLE);
   bool incompressible    = (config->GetKind_Regime() == INCOMPRESSIBLE);
@@ -2550,7 +2551,7 @@ void CAdjEulerSolver::Inviscid_Sensitivity(CGeometry *geometry, CSolver **solver
             SoundSpeed = solver_container[FLOW_SOL]->node[iPoint]->GetSoundSpeed();
             Mach = (sqrt(Velocity2))/SoundSpeed;
             if (Mach<1.0 && Mach>0.0)
-              Sens_BPress[iMarker]+=Psi[nDim+1]*SoundSpeed*((1-pow(Mach,2.0))/Mach)/Gamma_Minus_One;
+              Sens_BPress[iMarker]+=Psi[nDim+1]*SoundSpeed*(Mach-1/Mach)/Gamma_Minus_One;
           }
         }
         Total_Sens_BPress+= Sens_BPress[iMarker] * scale * factor;
@@ -2812,6 +2813,8 @@ void CAdjEulerSolver::Inviscid_Sensitivity(CGeometry *geometry, CSolver **solver
 #endif
   
   delete [] USens;
+  delete [] Velocity;
+  
 }
 
 void CAdjEulerSolver::Smooth_Sensitivity(CGeometry *geometry, CSolver **solver_container, CNumerics *numerics, CConfig *config) {
@@ -4453,12 +4456,12 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
   unsigned long iVertex, iPoint, Point_Normal;
   su2double Pressure=0.0, P_Exit=0.0, Velocity[3], Velocity2 = 0.0;
   su2double Density=0.0, Height=0.0;
-  su2double Vn = 0.0, SoundSpeed = 0.0, Mach_Exit=0.0,  LevelSet=0.0, Vn_Exit=0.0,
+  su2double Vn = 0.0, SoundSpeed = 0.0,  LevelSet=0.0, Vn_Exit=0.0,
       Riemann=0.0, Entropy=0.0, Density_Outlet = 0.0, Vn_rel=0.0;
   su2double Area, UnitNormal[3];
   su2double *V_outlet, *V_domain, *Psi_domain, *Psi_outlet, *Normal;
-  su2double dpterm,Mach_Exit_Normal=0.0;
-  su2double a1=0.0,a2=0.0,a3=0.0,a4=0.0,dPdn=0.0, drhodn=0.0; /*Placeholder terms to simplify expression/ repeated terms*/
+  su2double Mach_Exit_Normal=0.0;
+  su2double a1=0.0; /*Placeholder terms to simplify expression/ repeated terms*/
   su2double ProjGridVel = 0.0;
   su2double densgrad, pressgrad, velgrad;
   
@@ -4546,7 +4549,6 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
 
         Pressure = V_domain[nDim+1];
         SoundSpeed = sqrt(Pressure*Gamma/Density);
-        Mach_Exit  = sqrt(Velocity2)/SoundSpeed;
         Mach_Exit_Normal = Vn/SoundSpeed;
         
         /*--- Set Adjoint variables to 0 initially ---*/
@@ -4558,7 +4560,10 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           /*If there is no objective term defined on the outlet, all Psi are 0 (inviscid case) */
           Vn_Exit = Vn; /* Vn_Exit comes from Reiman conditions in subsonic case*/
           Vn_rel = Vn_Exit-ProjGridVel;
-
+          /*-- Some common terms --*/
+          a1 = SoundSpeed*SoundSpeed/(Vn_rel)/Gamma_Minus_One;
+          //a4 = Density*Vn_rel*(pow(SoundSpeed,2.0)-pow(Vn_rel,2.0));
+          
           /*--- Objective-dependent additions to energy term ---*/
           switch (config->GetKind_ObjFunc()){
             case OUTLET_CHAIN_RULE:
@@ -4566,7 +4571,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
               for (iDim=0; iDim<nDim; iDim++) velgrad += UnitNormal[iDim]*config->GetCoeff_ObjChainRule(iDim+1)*Area;
               densgrad = config->GetCoeff_ObjChainRule(0)*Area;
               pressgrad = config->GetCoeff_ObjChainRule(4)*Area;
-              Psi_outlet[nDim+1]= (Gamma_Minus_One*Mach_Exit_Normal/(pow(Mach_Exit_Normal,2.0)-Gamma)/SoundSpeed)*
+              Psi_outlet[nDim+1]= (Gamma_Minus_One*Mach_Exit_Normal/(pow(Mach_Exit_Normal,2.0)-1)/SoundSpeed)*
                   (pressgrad-velgrad/Density/Vn_rel+densgrad/pow(Vn_rel,2.0));
               break;
             case AVG_TOTAL_PRESSURE:
@@ -4577,12 +4582,12 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
               for (iDim = 0; iDim < nDim; iDim++) {
                 Velocity2 += Velocity[iDim]*Velocity[iDim];
               }
-              Psi_outlet[nDim+1]+=Gamma_Minus_One*Velocity2/(Vn_rel*SoundSpeed*(pow(Vn_rel,2.0)-pow(SoundSpeed,2.0)*Gamma));
+              Psi_outlet[nDim+1]+=Gamma_Minus_One*Velocity2/(Vn_rel*SoundSpeed*(pow(Vn_rel,2.0)-pow(SoundSpeed,2.0)));
               break;
             case AVG_OUTLET_PRESSURE:
               /*Area averaged static pressure*/
               /*--- Note: further terms are NOT added later for this case, only energy term is modified ---*/
-              Psi_outlet[nDim+1]+=Gamma_Minus_One*Vn_rel/(pow(Vn_rel,2.0)-pow(SoundSpeed,2.0)*Gamma);
+              Psi_outlet[nDim+1]+=Gamma_Minus_One*Vn_rel/(pow(Vn_rel,2.0)-pow(SoundSpeed,2.0));
               break;
             default:
               break;
@@ -4632,7 +4637,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         /*--- This occurs when subsonic, or for certain objective functions ---*/
         if ( Psi_outlet[nVar-1]!=0.0 ){
           /*--- Shorthand for repeated term in the boundary conditions ---*/
-          a1 = Gamma*SoundSpeed*SoundSpeed/(Vn_rel)/Gamma_Minus_One;
+          a1 = SoundSpeed*SoundSpeed/(Vn_rel)/Gamma_Minus_One;
           Psi_outlet[0] += Psi_outlet[nVar-1]*(Velocity2*0.5+Vn_Exit*a1);
           for (iDim = 0; iDim < nDim; iDim++) {
             Psi_outlet[iDim+1] += -Psi_outlet[nVar-1]*(a1*UnitNormal[iDim] + Velocity[iDim]);
@@ -5160,7 +5165,7 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
   unsigned short iDim, iVar, iMarker, nLineLets;
   ifstream restart_file;
   string filename, AdjExt;
-  su2double dull_val, Area=0.0, *Normal=NULL, myArea_Monitored;
+  su2double dull_val, Area=0.0, *Normal = NULL, myArea_Monitored;
   bool restart = config->GetRestart();
   bool compressible = (config->GetKind_Regime() == COMPRESSIBLE);
   bool incompressible = (config->GetKind_Regime() == INCOMPRESSIBLE);
