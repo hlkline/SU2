@@ -4568,11 +4568,13 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           switch (config->GetKind_ObjFunc()){
             case OUTLET_CHAIN_RULE:
               velgrad = 0.0;
-              for (iDim=0; iDim<nDim; iDim++) velgrad += UnitNormal[iDim]*config->GetCoeff_ObjChainRule(iDim+1)*Area;
-              densgrad = config->GetCoeff_ObjChainRule(0)*Area;
-              pressgrad = config->GetCoeff_ObjChainRule(4)*Area;
-              Psi_outlet[nDim+1]= (Gamma_Minus_One*Mach_Exit_Normal/(pow(Mach_Exit_Normal,2.0)-1)/SoundSpeed)*
-                  (pressgrad-velgrad/Density/Vn_rel+densgrad/pow(Vn_rel,2.0));
+              a1 = Gamma_Minus_One/(SoundSpeed*SoundSpeed-Vn_rel*Vn_rel);
+              for (iDim=0; iDim<nDim; iDim++) velgrad += UnitNormal[iDim]*config->GetCoeff_ObjChainRule(iDim+1);
+              densgrad = config->GetCoeff_ObjChainRule(0);
+              pressgrad = config->GetCoeff_ObjChainRule(4);
+              Psi_outlet[nDim+1]=-densgrad*a1/Vn_rel-pressgrad*Vn_rel*a1-velgrad*a1/Density;
+              //Psi_outlet[nDim+1]= (Gamma_Minus_One*Mach_Exit_Normal/(pow(Mach_Exit_Normal,2.0)-1)/SoundSpeed)*
+              //    (pressgrad-velgrad/Density/Vn_rel+densgrad/pow(Vn_rel,2.0));
               break;
             case AVG_TOTAL_PRESSURE:
               /*--- Total Pressure term. NOTE: this is AREA averaged
@@ -4637,7 +4639,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         /*--- This occurs when subsonic, or for certain objective functions ---*/
         if ( Psi_outlet[nVar-1]!=0.0 ){
           /*--- Shorthand for repeated term in the boundary conditions ---*/
-          a1 = SoundSpeed*SoundSpeed/(Vn_rel)/Gamma_Minus_One;
+          a1 = SoundSpeed/Gamma_Minus_One;
           Psi_outlet[0] += Psi_outlet[nVar-1]*(Velocity2*0.5+Vn_Exit*a1);
           for (iDim = 0; iDim < nDim; iDim++) {
             Psi_outlet[iDim+1] += -Psi_outlet[nVar-1]*(a1*UnitNormal[iDim] + Velocity[iDim]);
@@ -4701,15 +4703,30 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         break;
       case OUTLET_CHAIN_RULE:
         /* repeated term */
-        a1 = 1.0/Density/pow(Vn_rel,2.0);
+        a1 = 1.0/(SoundSpeed+Vn_rel);
         velgrad = 0.0;
+        su2double velgradcross;
 
-        for (iDim=0; iDim<nDim; iDim++) velgrad += Velocity[iDim]*config->GetCoeff_ObjChainRule(iDim+1)*Area;
-        densgrad = Density*config->GetCoeff_ObjChainRule(0)*Area;
-        Psi_outlet[0]+=((Vn_rel+Vn)*densgrad-Vn_rel*velgrad)*a1;
         for (iDim=0; iDim<nDim; iDim++)
-          Psi_outlet[iDim+1]+=a1*(-UnitNormal[iDim]*densgrad+Vn_rel*config->GetCoeff_ObjChainRule(iDim+1)*Area);
+          velgrad += UnitNormal[iDim]*config->GetCoeff_ObjChainRule(iDim+1);
 
+        if (nDim==2){
+          velgradcross = (config->GetCoeff_ObjChainRule(1)*UnitNormal[1]-config->GetCoeff_ObjChainRule(2)*UnitNormal[0])*(Velocity[0]*UnitNormal[1]-Velocity[1]*UnitNormal[0]);
+        }
+        else{
+          velgradcross = (config->GetCoeff_ObjChainRule(2)*UnitNormal[2]-config->GetCoeff_ObjChainRule(3)*UnitNormal[1])*(Velocity[1]*UnitNormal[2]-Velocity[2]*UnitNormal[1]);
+          velgradcross +=(config->GetCoeff_ObjChainRule(3)*UnitNormal[0]-config->GetCoeff_ObjChainRule(1)*UnitNormal[2])*(Velocity[2]*UnitNormal[0]-Velocity[0]*UnitNormal[2]);
+          velgradcross +=(config->GetCoeff_ObjChainRule(1)*UnitNormal[1]-config->GetCoeff_ObjChainRule(2)*UnitNormal[0])*(Velocity[0]*UnitNormal[1]-Velocity[1]*UnitNormal[0]);
+        }
+
+        densgrad = config->GetCoeff_ObjChainRule(0);
+        pressgrad = config->GetCoeff_ObjChainRule(4);
+        Psi_outlet[0]+=(  (SoundSpeed+Vn_rel+Vn)*densgrad/Vn_rel +SoundSpeed*pressgrad*Vn_rel + velgrad*(-Vn_rel)/Density )*a1;
+        Psi_outlet[0]+=velgradcross/Density/Vn_rel;
+        for (iDim=0; iDim<nDim; iDim++){
+          Psi_outlet[iDim+1]+=a1*UnitNormal[iDim]*(-densgrad/Vn_rel+ SoundSpeed*pressgrad - SoundSpeed*velgrad/Density/Vn_rel);
+          Psi_outlet[iDim+1]+=a1*(config->GetCoeff_ObjChainRule(iDim+1)/Density);
+        }
         break;
       case AVG_TOTAL_PRESSURE:
         /*--- For total pressure objective function. NOTE: this is AREA averaged term---*/
