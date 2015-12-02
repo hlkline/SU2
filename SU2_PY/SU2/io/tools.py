@@ -536,7 +536,7 @@ def get_dvMap():
                15  : "FFD_CONTROL_POINT_2D"  ,
                16  : "FFD_CAMBER_2D"         ,
                17  : "FFD_THICKNESS_2D"      ,
-               19  : "OTHER"                 ,
+               19  : "CUSTOM"                ,
                101 : "MACH_NUMBER"           ,
                102 : "AOA"                   }
     
@@ -672,7 +672,7 @@ def get_gradFileFormat(grad_type,plot_format,kindID,special_cases=[]):
         write_format.append(r', %s, %s, %s')
     elif kindID == "MACH_NUMBER"        : pass
     elif kindID == "AOA"                : pass
-    elif kindID == "OTHER"              : pass
+    elif kindID == "CUSTOM"             : pass
     
     # otherwise...
     else: raise Exception('Unrecognized Design Variable Kind') 

@@ -117,13 +117,13 @@ def gradient( func_name, method, config, state=None ):
         else:
             raise Exception , 'unrecognized gradient method'
 
-        if ('OTHER' in config.DV_KIND):
+        if ('CUSTOM' in config.DV_KIND):
             import downstream_function
             chaingrad = downstream_function.downstream_gradient(config,state)
             n_dv = len(grads[func_name])
             custom_dv=1
             for idv in range(n_dv):
-                if (config.DV_KIND[idv] == 'OTHER'):
+                if (config.DV_KIND[idv] == 'CUSTOM'):
                     grads[func_name][idv] = chaingrad[4+custom_dv]
                     custom_dv = custom_dv+1
 
