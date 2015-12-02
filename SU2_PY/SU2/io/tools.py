@@ -207,6 +207,7 @@ def get_headerMap():
                  "FluxAvg_Velocity": "FLUXAVG_OUTLET_VELOCITY" ,
                  "Avg_Mach"        : "AVG_OUTLET_MACH"         ,
                  "Avg_Temperature" : "AVG_OUTLET_TEMPERATURE"  ,
+                 "Avg_Velocity"    : "AVG_OUTLET_VELOCITY"     ,
                  "MassFlowRate"    : "MASS_FLOW_RATE"          ,
                  "Time(min)"       : "TIME"                    ,
                  "D(CLift)"        : "D_LIFT"                  ,

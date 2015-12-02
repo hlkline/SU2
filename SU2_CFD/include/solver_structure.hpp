@@ -2032,6 +2032,18 @@ public:
    * set average temperature evaluated at an exit boundary marker
    */
   virtual void SetOneD_MassFlowRate(su2double MassFlowRate);
+
+  /*!
+   * \brief A virtual member.
+   * \return average temperature evaluated at an exit boundary marker
+   */
+  virtual su2double GetOneD_Velocity(void);
+
+  /*!
+   * \brief A virtual member.
+   * set average temperature evaluated at an exit boundary marker
+   */
+  virtual void SetOneD_Velocity(su2double AverageVelocity);
   
   /*!
    * \brief A virtual member.
@@ -2583,6 +2595,7 @@ protected:
   OneD_Mach, /*!< \brief area average Mach evaluated at an exit */
   OneD_Temp, /*!< \brief area average Temperature evaluated at an exit */
   OneD_PressureRef, /*!< \brief area average Pressure evaluated at an exit */
+  OneD_Velocity, /*!< \brief area average Velocity evaluated at an exit */
   OneD_MassFlowRate, /*!< \brief Mass flow rate at an exit */
   OneD_DensityRef, /*!< \brief flux average density evaluated at an exit */
   OneD_EnthalpyRef, /*!< \brief flux average enthalpy evaluated at an exit */
@@ -3740,6 +3753,17 @@ public:
    * \brief Set the averaged Temperature at a marker.
    */
   void SetOneD_MassFlowRate(su2double MassFlowRate);
+
+  /*!
+   * \brief Provide the averaged Mach number at a marker.
+   */
+  su2double GetOneD_Velocity(void);
+
+  /*!
+   * \brief Set the averaged Temperature at a marker.
+   */
+  void SetOneD_Velocity(su2double AverageVelocity);
+
   
   /*!
    * \brief Get the flux averaged pressure at a marker.(same as area averaged pressure)
