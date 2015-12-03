@@ -4740,7 +4740,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           Velocity[iDim] = Velocity[iDim] + (Vn_Exit-Vn)*UnitNormal[iDim];
           Velocity2 += Velocity[iDim]*Velocity[iDim];
         }
-        Psi_outlet[0]+=a1*Velocity2/2.0/Vn_Exit;
+        Psi_outlet[0]-=a1*SoundSpeed*Velocity2/Vn_rel;
         for (iDim = 0; iDim < nDim; iDim++)
           Psi_outlet[iDim+1] +=a1*UnitNormal[iDim]*(-Velocity2)/(2.0*Vn_Exit)+Velocity[iDim]/Vn_Exit;
         break;
