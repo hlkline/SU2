@@ -98,6 +98,22 @@ def projection( config, step = 1e-3 ):
     # read raw gradients
     raw_gradients = su2io.read_gradients(grad_filename)
     os.remove(grad_filename)
+
+    # gradient output dictionary
+    info = su2io.State()
+    
+    if (objective == 'OUTLET_CHAIN_RULE') and ('CUSTOM' in konfig.DV_KIND):
+        import downstream_function # Must be defined in run folder
+        info.find_files(konfig)
+        info['HISTORY']['DIRECT'] = su2io.tools.read_history('history_direct.dat')
+        chaingrad = downstream_function.downstream_gradient(konfig,info,step)
+        func_name = 'OUTLET_CHAIN_RULE'
+        n_dv = len(raw_gradients)
+        custom_dv=1
+        for idv in range(n_dv):
+            if (konfig.DV_KIND[idv] == 'CUSTOM'):
+                raw_gradients[idv] = chaingrad[4+custom_dv]
+                custom_dv = custom_dv+1
     
     # Write Gradients
     data_plot = su2util.ordered_bunch()
@@ -106,11 +122,9 @@ def projection( config, step = 1e-3 ):
     data_plot['FINDIFF_STEP'] = step
     su2util.write_plot(grad_plotname,output_format,data_plot)
 
-    # gradient output dictionary
     gradients = { objective : raw_gradients }
-    
+       
     # info out
-    info = su2io.State()
     info.GRADIENTS.update( gradients )
     
     return info

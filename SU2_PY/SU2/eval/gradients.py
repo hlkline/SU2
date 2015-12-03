@@ -132,7 +132,6 @@ def gradient( func_name, method, config, state=None ):
         
 
     # if not redundant
-
     # prepare output
     grads_out = state['GRADIENTS'][func_name]
 
