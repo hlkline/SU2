@@ -124,7 +124,7 @@ def gradient( func_name, method, config, state=None ):
             custom_dv=1
             for idv in range(n_dv):
                 if (config.DV_KIND[idv] == 'CUSTOM'):
-                    grads[func_name][idv] = chaingrad[4+custom_dv]
+                    grads['OUTLET_CHAIN_RULE'][idv] = chaingrad[4+custom_dv]
                     custom_dv = custom_dv+1
 
         # store
@@ -528,6 +528,12 @@ def findiff( config, state=None, step=1e-4 ):
     if 'INV_DESIGN_HEATFLUX' in special_cases and 'TARGET_HEATFLUX' in files:
         pull.append(files['TARGET_HEATFLUX'])
 
+
+    if ('CUSTOM' in konfig.DV_KIND):
+        import downstream_function
+        chaingrad = downstream_function.downstream_gradient(config,state)
+        custom_dv=1
+
     # output redirection
     with redirect_folder('FINDIFF',pull,link) as push:
         with redirect_output(log_findiff):
@@ -567,8 +573,13 @@ def findiff( config, state=None, step=1e-4 ):
                         grads[key].append(this_grad)
                 #: for each grad name
 
+                if (konfig.DV_KIND[i_dv] == 'CUSTOM'):
+                    grads['OUTLET_CHAIN_RULE'][i_dv] = chaingrad[4+custom_dv]
+                    custom_dv = custom_dv+1
+
                 su2util.write_plot(grad_filename,output_format,grads)
                 os.remove(temp_config_name)
+     
 
             #: for each dv
 

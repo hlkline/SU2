@@ -107,7 +107,6 @@ def projection( config, step = 1e-3 ):
         info.find_files(konfig)
         info['HISTORY']['DIRECT'] = su2io.tools.read_history('history_direct.dat')
         chaingrad = downstream_function.downstream_gradient(konfig,info,step)
-        func_name = 'OUTLET_CHAIN_RULE'
         n_dv = len(raw_gradients)
         custom_dv=1
         for idv in range(n_dv):
