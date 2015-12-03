@@ -44,8 +44,8 @@ from interface import DOT as SU2_DOT
 #  Gradient Projection
 # ----------------------------------------------------------------------
 
-def projection( config, step = 1e-3 ):
-    """ info = SU2.run.projection(config,step=1e-3)
+def projection( config, state={}, step = 1e-3 ):
+    """ info = SU2.run.projection(config,state,step=1e-3)
         
         Runs an gradient projection with:
             SU2.run.decomp()
@@ -104,9 +104,7 @@ def projection( config, step = 1e-3 ):
     
     if (objective == 'OUTLET_CHAIN_RULE') and ('CUSTOM' in konfig.DV_KIND):
         import downstream_function # Must be defined in run folder
-        info.find_files(konfig)
-        info['HISTORY']['DIRECT'] = su2io.tools.read_history('history_direct.dat')
-        chaingrad = downstream_function.downstream_gradient(konfig,info,step)
+        chaingrad = downstream_function.downstream_gradient(konfig,state,step)
         n_dv = len(raw_gradients)
         custom_dv=1
         for idv in range(n_dv):

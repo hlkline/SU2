@@ -265,7 +265,7 @@ def adjoint( func_name, config, state=None ):
             state.update(info)
 
             # Gradient Projection
-            info = su2run.projection(config)
+            info = su2run.projection(config,state)
             state.update(info)
 
             # solution files to push

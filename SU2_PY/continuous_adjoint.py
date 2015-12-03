@@ -110,7 +110,7 @@ def continuous_adjoint( filename           ,
         #SU2.io.restart2solution(config,state)
            
     # Gradient Projection
-    info = SU2.run.projection(config,step)
+    info = SU2.run.projection(config,state, step)
     state.update(info)
 
     return state
