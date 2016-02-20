@@ -96,7 +96,7 @@ public:
 
   /*!
  * \brief Constructor of the class.
- * \param[in] geometry - Geometrical definition of the problem.
+ * \param[in] geometry_container - Geometrical definition of the problem.
  * \param[in] config - Definition of the particular problem.
  * \param[in] iZone - index of the donor zone
  * \param[in] jZone - index of the target zone
@@ -152,7 +152,7 @@ public:
 
   /*!
    * \brief Constructor of the class.
-   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] geometry_container - Geometrical definition of the problem.
    * \param[in] config - Definition of the particular problem.
    * \param[in] iZone - index of the donor zone
    * \param[in] jZone - index of the target zone
@@ -180,7 +180,7 @@ public:
 
   /*!
    * \brief Constructor of the class.
-   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] geometry_container - Geometrical definition of the problem.
    * \param[in] config - Definition of the particular problem.
    * \param[in] iZone - index of the donor zone
    * \param[in] jZone - index of the target zone
@@ -200,17 +200,13 @@ public:
 
   /*!
    * \brief Calculate the isoparametric representation of point iVertex in marker iZone_0 by nodes of element donor_elem in marker jMarker of zone iZone_1.
-   * \param[in] iVertex - vertex index of the point being interpolated.
    * \param[in] nDim - the dimension of the coordinates.
-   * \param[in] iZone_1 - zone index of the element to use for interpolation (the DONOR zone)
-   * \param[in] donor_elem - element index of the element to use for interpolation (or global index of a point in 2D)
-   * \param[in[ nDonorPoints - number of donor points in the element.
+   * \param[in[ nDonor - number of donor points in the element.
+   * \param[in] X - Coordinates of the donor points, size nDim*nDonor, ith dimension of jth donor referenced as: X[i*nDonor+j]
    * \param[in] xj - point projected onto the plane of the donor element.
    * \param[out] isoparams - isoparametric coefficients. Must be allocated to size nNodes ahead of time. (size> nDonors)
    *
-   * If the problem is 2D, the 'face' projected onto is actually an edge; the local index
-   * of the edge is then stored in iFace, and the global index of the node (from which the edge
-   * is referenced)
+   * If the problem is 2D, the 'face' projected onto is actually an edge.
    */
   void Isoparameters(unsigned short nDim, unsigned short nDonor, su2double *X, su2double *xj,su2double* isoparams);
 
