@@ -36,6 +36,7 @@ CAdjEulerVariable::CAdjEulerVariable(void) : CVariable() {
   /*--- Array initialization ---*/
 	Psi = NULL;
 	ForceProj_Vector = NULL;
+	GenAdj_Grad = NULL;
 	ObjFuncSource = NULL;
 	IntBoundary_Jump = NULL;
 	TS_Source = NULL;
@@ -55,6 +56,7 @@ CAdjEulerVariable::CAdjEulerVariable(su2double val_psirho, su2double *val_phi, s
   /*--- Array initialization ---*/
 	Psi = NULL;
 	ForceProj_Vector = NULL;
+	GenAdj_Grad = NULL;
 	ObjFuncSource = NULL;
 	IntBoundary_Jump = NULL;
 	TS_Source = NULL;
@@ -150,6 +152,13 @@ CAdjEulerVariable::CAdjEulerVariable(su2double val_psirho, su2double *val_phi, s
 			TS_Source[iVar] = 0.0;
 	}
 	
+	if (config->GetKind_ObjFunc() == OUTFLOW_GENERALIZED){
+	  GenAdj_Grad = new su2double[5];
+	  for (iVar=0; iVar<5; iVar++){
+	    GenAdj_Grad[iVar] = 0.0;
+	  }
+	}
+
 }
 
 CAdjEulerVariable::CAdjEulerVariable(su2double *val_solution, unsigned short val_nDim,
@@ -162,6 +171,7 @@ CAdjEulerVariable::CAdjEulerVariable(su2double *val_solution, unsigned short val
   /*--- Array initialization ---*/
 	Psi = NULL;
 	ForceProj_Vector = NULL;
+  GenAdj_Grad = NULL;
 	ObjFuncSource = NULL;
 	IntBoundary_Jump = NULL;
 	TS_Source = NULL;
@@ -233,6 +243,13 @@ CAdjEulerVariable::CAdjEulerVariable(su2double *val_solution, unsigned short val
 			TS_Source[iVar] = 0.0;
 	}
   
+  if (config->GetKind_ObjFunc() == OUTFLOW_GENERALIZED){
+    GenAdj_Grad = new su2double[5];
+    for (iVar=0; iVar<5; iVar++){
+      GenAdj_Grad[iVar] = 0.0;
+    }
+  }
+
 }
 
 CAdjEulerVariable::~CAdjEulerVariable(void) {
@@ -240,6 +257,7 @@ CAdjEulerVariable::~CAdjEulerVariable(void) {
 	if (Psi               != NULL) delete [] Psi;
 	if (ForceProj_Vector  != NULL) delete [] ForceProj_Vector;
 	if (ObjFuncSource     != NULL) delete [] ObjFuncSource;
+	if (GenAdj_Grad       != NULL) delete [] GenAdj_Grad;
 	if (IntBoundary_Jump  != NULL) delete [] IntBoundary_Jump;
 	if (TS_Source         != NULL) delete [] TS_Source;
   

@@ -259,6 +259,10 @@ inline su2double *CVariable::GetForceProj_Vector(void) { return NULL; }
 
 inline su2double *CVariable::GetObjFuncSource(void) { return NULL; }
 
+inline su2double CVariable::GetGenAdj_Grad(unsigned short val_var) { return 0.0; }
+
+inline void CVariable::SetGenAdj_Grad(su2double *val_GenAdj_Grad) {}
+
 inline su2double *CVariable::GetIntBoundary_Jump(void) { return NULL; }
 
 inline su2double CVariable::GetEddyViscosity(void) { return 0; }
@@ -832,6 +836,10 @@ inline void CTransLMVariable::SetGammaSep(su2double gamma_sep_in) {gamma_sep = g
 
 inline su2double *CAdjEulerVariable::GetForceProj_Vector(void) { return ForceProj_Vector; }
 
+inline su2double CAdjEulerVariable::GetGenAdj_Grad(unsigned short val_var) { return GenAdj_Grad[val_var]; }
+
+inline void CAdjEulerVariable::SetGenAdj_Grad(su2double *val_GenAdj_Grad) {for (unsigned short iVar=0; iVar<5; iVar++) GenAdj_Grad[iVar] = val_GenAdj_Grad[iVar];}
+
 inline su2double *CAdjEulerVariable::GetObjFuncSource(void) { return ObjFuncSource; }
 
 inline su2double *CAdjEulerVariable::GetIntBoundary_Jump(void) { return IntBoundary_Jump; }
@@ -851,6 +859,10 @@ inline su2double CAdjEulerVariable::GetTimeSpectral_Source(unsigned short val_va
 inline su2double *CAdjNSVariable::GetForceProj_Vector(void) { return ForceProj_Vector; }
 
 inline void CAdjNSVariable::SetForceProj_Vector(su2double *val_ForceProj_Vector) {	for (unsigned short iDim = 0; iDim < nDim; iDim++) ForceProj_Vector[iDim] = val_ForceProj_Vector[iDim]; }
+
+inline su2double CAdjNSVariable::GetGenAdj_Grad(unsigned short val_var) { return GenAdj_Grad[val_var]; }
+
+inline void CAdjNSVariable::SetGenAdj_Grad(su2double *val_GenAdj_Grad) {for (unsigned short iVar=0; iVar<5; iVar++) GenAdj_Grad[iVar] = val_GenAdj_Grad[iVar];}
 
 inline void CAdjNSVariable::SetPhi_Old(su2double *val_phi) { for (unsigned short iDim = 0; iDim < nDim; iDim++) Solution_Old[iDim+1] = val_phi[iDim]; };
 

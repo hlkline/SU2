@@ -702,6 +702,7 @@ private:
   bool ParMETIS;      /*!< \brief Boolean for activating ParMETIS mode (while testing). */
   unsigned short DirectDiff; /*!< \brief Direct Differentation mode. */
   bool DiscreteAdjoint; /*!< \brief AD-based discrete adjoint mode. */
+  string Gradient_Filename; /*! \brief input file for external gradients as inputs to generalized adjoint. */
   
   /*--- all_options is a map containing all of the options. This is used during config file parsing
   to track the options which have not been set (so the default values can be used). Without this map
@@ -4998,6 +4999,12 @@ public:
 	 * \return File name of the arbitrary mesh motion input file.
 	 */
 	string GetMotion_FileName(void);
+
+  /*!
+   * \brief Get name of the arbitrary gradient input file.
+   * \return File name of the arbitrary gradient input file.
+   */
+  string GetGradient_FileName(void);
 
   /*!
 	 * \brief Set the config options.

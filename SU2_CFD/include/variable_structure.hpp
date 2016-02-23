@@ -819,6 +819,19 @@ public:
 	virtual su2double *GetObjFuncSource(void);
 
 	/*!
+   * \brief Get the value of the gradient as input to the generalized adjoint
+   * \param[in] val_var - index of the gradient
+   * \return value of an external gradient
+   */
+  virtual su2double GetGenAdj_Grad(unsigned short val_var);
+
+  /*!
+   * \brief Set the value of the gradient as input to the generalized adjoint
+   * \param[in] val_GenAdj_Grad - index of the gradient
+   */
+  virtual void SetGenAdj_Grad(su2double *val_GenAdj_Grad);
+
+	/*!
 	 * \brief A virtual member.
 	 * \return Pointer to the internal boundary vector.
 	 */
@@ -3950,6 +3963,7 @@ protected:
 	su2double *Psi;		/*!< \brief Vector of the adjoint variables. */
 	su2double *ForceProj_Vector;	/*!< \brief Vector d. */
 	su2double *ObjFuncSource;    /*!< \brief Vector containing objective function sensitivity for discrete adjoint. */
+	su2double *GenAdj_Grad; /*< \brief Vector containing gradients of primitive variables for generalized continuous adjoint. */
 	su2double *IntBoundary_Jump;	/*!< \brief Interior boundary jump vector. */
 	su2double *TS_Source;		/*!< \brief Time spectral source term. */
 	bool incompressible;
@@ -4040,6 +4054,20 @@ public:
 	su2double *GetObjFuncSource(void);
 
 	/*!
+   * \brief Get the value of the gradient as input to the generalized adjoint
+   * \param[in] val_var - index of the gradient
+   * \return value of an external gradient
+   */
+	su2double GetGenAdj_Grad(unsigned short val_var);
+
+  /*!
+   * \brief Set the value of the gradient as input to the generalized adjoint
+   * \param[in] val_GenAdj_Grad - index of the gradient
+   */
+  void SetGenAdj_Grad(su2double *val_GenAdj_Grad);
+
+
+	/*!
 	 * \brief Get the value of the force projection vector.
 	 * \return Pointer to the force projection vector.
 	 */		
@@ -4119,6 +4147,19 @@ public:
 	 * \return Pointer to the force projection vector.
 	 */
 	su2double *GetForceProj_Vector(void);
+
+  /*!
+   * \brief Get the value of the gradient as input to the generalized adjoint
+   * \param[in] val_var - index of the gradient
+   * \return value of an external gradient
+   */
+  su2double GetGenAdj_Grad(unsigned short val_var);
+
+  /*!
+   * \brief Set the value of the gradient as input to the generalized adjoint
+   * \param[in] val_GenAdj_Grad - index of the gradient
+   */
+  void SetGenAdj_Grad(su2double *val_GenAdj_Grad);
 
 	/*!
 	 * \brief Set the value of the force projection vector on the solution vector.

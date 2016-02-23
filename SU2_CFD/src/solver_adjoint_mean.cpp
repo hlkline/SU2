@@ -31,6 +31,7 @@
 
 #include "../include/solver_structure.hpp"
 
+
 CAdjEulerSolver::CAdjEulerSolver(void) : CSolver() {
   
   /*--- Array initialization ---*/
@@ -52,9 +53,10 @@ CAdjEulerSolver::CAdjEulerSolver(void) : CSolver() {
 
 CAdjEulerSolver::CAdjEulerSolver(CGeometry *geometry, CConfig *config, unsigned short iMesh) : CSolver() {
   unsigned long iPoint, index, iVertex;
-  string text_line, mesh_filename;
+  unsigned long jPoint, GlobalIndex;
+  string text_line, mesh_filename, gradient_filename;
   unsigned short iDim, iVar, iMarker, nLineLets;
-  ifstream restart_file;
+  ifstream restart_file, gradient_file;
   string filename, AdjExt;
   su2double dull_val, myArea_Monitored, Area, *Normal;
   bool restart = config->GetRestart();
@@ -330,7 +332,51 @@ CAdjEulerSolver::CAdjEulerSolver(CGeometry *geometry, CConfig *config, unsigned 
   /*--- Define solver parameters needed for execution of destructor ---*/
   if (config->GetKind_ConvNumScheme_AdjFlow() == SPACE_CENTERED) space_centered = true;
   else space_centered = false;
+
   
+
+  /*--- If generalized outflow adjoint is used, read in the externally-defined gradients ---*/
+  if (config->GetKind_ObjFunc()==OUTFLOW_GENERALIZED){
+    su2double NewGrad[5];
+
+    /*--- Check whether a surface file exists for input ---*/
+    gradient_filename = config->GetGradient_FileName();
+    gradient_file.open(gradient_filename.data(), ios::in);
+
+    /*--- A surface file does not exist, so write a new one for the
+    markers that are specified as part of the motion. ---*/
+    if (gradient_file.fail()) {
+
+      if (rank == MASTER_NODE)
+        cout << "No gradient file found. All gradients will be set to 0." << endl;
+      gradient_file.close();
+    }
+    else{
+      /*--- Read in and store the new gradient values ---*/
+
+      while (getline(gradient_file, text_line)) {
+        istringstream point_line(text_line);
+        point_line >> iPoint >> NewGrad[0] >> NewGrad[1] >> NewGrad[2] >> NewGrad[3] >> NewGrad[4];
+        for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
+          if (config->GetMarker_All_Monitoring(iMarker) == YES) {
+            for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+              jPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+              GlobalIndex = geometry->node[jPoint]->GetGlobalIndex();
+              if (GlobalIndex == iPoint) {
+                node[jPoint]->SetGenAdj_Grad(NewGrad);
+                break;
+              }
+            }
+          }
+        }
+      }
+      /*--- Close the restart file ---*/
+      gradient_file.close();
+    }
+  }
+
+
+
   /*--- Calculate area monitored for area-averaged-outflow-quantity-based objectives ---*/
   myArea_Monitored = 0.0;
   if (config->GetKind_ObjFunc()==OUTFLOW_GENERALIZED || config->GetKind_ObjFunc()==AVG_TOTAL_PRESSURE ||
@@ -350,12 +396,14 @@ CAdjEulerSolver::CAdjEulerSolver(CGeometry *geometry, CConfig *config, unsigned 
       }
     }
   }
+
 #ifdef HAVE_MPI
   Area_Monitored = 0.0;
   SU2_MPI::Allreduce(&myArea_Monitored, &Area_Monitored, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
   Area_Monitored = myArea_Monitored;
 #endif
+
 
   /*--- MPI solution ---*/
   Set_MPI_Solution(geometry, config);
@@ -2374,10 +2422,10 @@ void CAdjEulerSolver::Inviscid_Sensitivity(CGeometry *geometry, CSolver **solver
   
   if ((ObjFunc == INVERSE_DESIGN_HEATFLUX) || (ObjFunc == FREE_SURFACE) ||
       (ObjFunc == TOTAL_HEATFLUX) || (ObjFunc == MAXIMUM_HEATFLUX) ||
-      (ObjFunc == MASS_FLOW_RATE) ) factor = 1.0;
+      (ObjFunc == MASS_FLOW_RATE) || (ObjFunc == OUTFLOW_GENERALIZED))
+    factor = 1.0;
 
- if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE) ||
-     (ObjFunc == OUTFLOW_GENERALIZED)) factor = 1.0/Area_Monitored;
+ if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE) ) factor = 1.0/Area_Monitored;
   
   /*--- Initialize sensitivities to zero ---*/
   
@@ -4579,9 +4627,9 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           switch (config->GetKind_ObjFunc()){
           case OUTFLOW_GENERALIZED:
             velocity_gradient = 0.0;
-            for (iDim=0; iDim<nDim; iDim++) velocity_gradient += UnitNormal[iDim]*config->GetCoeff_ObjChainRule(iDim+1);
-            density_gradient = config->GetCoeff_ObjChainRule(0);
-            pressure_gradient = config->GetCoeff_ObjChainRule(4);
+            for (iDim=0; iDim<nDim; iDim++) velocity_gradient += UnitNormal[iDim]*node[iPoint]->GetGenAdj_Grad(iDim+1); //config->GetCoeff_ObjChainRule(iDim+1);
+            density_gradient = node[iPoint]->GetGenAdj_Grad(0); //config->GetCoeff_ObjChainRule(0);
+            pressure_gradient = node[iPoint]->GetGenAdj_Grad(4); //config->GetCoeff_ObjChainRule(4);
             Psi_outlet[nDim+1]=a1*(density_gradient/Vn_rel+pressure_gradient*Vn_rel-velocity_gradient/Density);
             break;
           case AVG_TOTAL_PRESSURE:
@@ -4711,11 +4759,11 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         Psi_outlet[0]+=1;
         break;
       case OUTFLOW_GENERALIZED:
-        density_gradient = config->GetCoeff_ObjChainRule(0);
-        pressure_gradient = config->GetCoeff_ObjChainRule(4);
+        density_gradient = node[iPoint]->GetGenAdj_Grad(0); //config->GetCoeff_ObjChainRule(0);
+        pressure_gradient = node[iPoint]->GetGenAdj_Grad(4); //config->GetCoeff_ObjChainRule(4);
         velocity_gradient = 0.0;    /*Inside the option, this term is $\vec{v} \cdot \frac{dg}{d\vec{v}}$ */
         for (iDim=0; iDim<nDim; iDim++)
-          velocity_gradient += Velocity[iDim]*config->GetCoeff_ObjChainRule(iDim+1);
+          velocity_gradient += Velocity[iDim]*node[iPoint]->GetGenAdj_Grad(iDim+1); //config->GetCoeff_ObjChainRule(iDim+1);
         /* repeated term */
         /* Characteristic-based version (for possible future use.)
         a1 = 1.0/(SoundSpeed+Vn_Exit); // Repeated term
@@ -4739,7 +4787,8 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         /*Pressure-fixed version*/
         Psi_outlet[0]+=density_gradient*2.0/Vn_Exit-velocity_gradient/Density/Vn_Exit;
         for (iDim=0; iDim<nDim; iDim++){
-          Psi_outlet[iDim+1]+=config->GetCoeff_ObjChainRule(iDim+1)/Density/Vn_Exit-UnitNormal[iDim]*density_gradient/Vn_Exit/Vn_Exit;
+          Psi_outlet[iDim+1]+=node[iPoint]->GetGenAdj_Grad(iDim+1)/Density/Vn_Exit-UnitNormal[iDim]*density_gradient/Vn_Exit/Vn_Exit;
+              //config->GetCoeff_ObjChainRule(iDim+1)
         }
         break;
       case AVG_TOTAL_PRESSURE:
@@ -5852,10 +5901,10 @@ void CAdjNSSolver::Viscous_Sensitivity(CGeometry *geometry, CSolver **solver_con
   
   if ((ObjFunc == INVERSE_DESIGN_HEATFLUX) || (ObjFunc == FREE_SURFACE) ||
       (ObjFunc == TOTAL_HEATFLUX) || (ObjFunc == MAXIMUM_HEATFLUX) ||
-      (ObjFunc == MASS_FLOW_RATE) ) factor = 1.0;
+      (ObjFunc == MASS_FLOW_RATE) || (ObjFunc == OUTFLOW_GENERALIZED))
+    factor = 1.0;
 
- if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE) ||
-     (ObjFunc == OUTFLOW_GENERALIZED)) factor = 1.0/Area_Monitored;
+ if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE) ) factor = 1.0/Area_Monitored;
 
 
   /*--- Compute gradient of the grid velocity, if applicable ---*/
