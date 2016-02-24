@@ -395,6 +395,313 @@ void COutput::SetSurfaceCSV_Flow(CConfig *config, CGeometry *geometry,
   
 }
 
+
+void COutput::SetMonitoredCSV(CConfig *config, CGeometry *geometry,
+                                 CSolver *FlowSolver, unsigned long iExtIter,
+                                 unsigned short val_iZone) {
+
+  unsigned short iMarker;
+  unsigned long iPoint, iVertex, Global_Index;
+  su2double PressCoeff = 0.0, ConsVar = 0.0;
+  su2double xCoord = 0.0, yCoord = 0.0, zCoord = 0.0, Mach, Pressure, *Normal;
+  char cstr[200];
+
+  unsigned short iVar = 0, iDim=0;
+  unsigned short nDim = geometry->GetnDim();
+
+  nVar_Consv = FlowSolver->GetnVar();
+
+#ifndef HAVE_MPI
+
+  su2double HeatFlux;
+  char buffer [50];
+  ofstream SurfFlow_file;
+
+  /*--- Write file name with extension if unsteady ---*/
+  strcpy (cstr, config->GetSurfFlowCoeff_FileName().c_str());
+  SPRINTF (buffer, "_Monitored.csv");
+
+  strcat (cstr, buffer);
+  SurfFlow_file.precision(15);
+  SurfFlow_file.open(cstr, ios::out);
+
+  SurfFlow_file << "\"Global_Index\", \"x_coord\", \"y_coord\", ";
+  if (nDim == 3) SurfFlow_file << "\"z_coord\", ";
+  SurfFlow_file << "\"N_x\", \"N_y\", ";
+    if (nDim == 3) SurfFlow_file << "\"N_z\", ";
+  SurfFlow_file << "\"Pressure\", \"Pressure_Coefficient\", ";
+
+  for (iVar = 0; iVar < nVar_Consv; iVar++) {
+    SurfFlow_file << ", \"Conservative_" << iVar+1 << "\"";
+  }
+  SurfFlow_file <<  ", \"Mach_Number\"" << endl;
+
+
+  for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
+    if (config->GetMarker_All_Monitoring(iMarker) == YES) {
+      for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+        iPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+        Global_Index = geometry->node[iPoint]->GetGlobalIndex();
+        xCoord = geometry->node[iPoint]->GetCoord(0);
+        yCoord = geometry->node[iPoint]->GetCoord(1);
+        if (nDim == 3) zCoord = geometry->node[iPoint]->GetCoord(2);
+
+        Normal = geometry->vertex[iMarker][iVertex]->GetNormal();
+
+        /*--- The output should be in inches ---*/
+
+        if (config->GetSystemMeasurements() == US) {
+          xCoord *= 12.0; yCoord *= 12.0;
+          if (nDim == 3) zCoord *= 12.0;
+        }
+
+        Pressure = FlowSolver->node[iPoint]->GetPressure();
+        PressCoeff = FlowSolver->GetCPressure(iMarker, iVertex);
+        SurfFlow_file << scientific << Global_Index << ", " << xCoord << ", " << yCoord << ", ";
+        if (nDim == 3) SurfFlow_file << scientific << zCoord << ", ";
+
+        for (iDim=0; iDim<nDim; iDim++)
+          SurfFlow_file << scientific << Normal[iDim] << ", ";
+
+        SurfFlow_file << scientific << Pressure << ", " << PressCoeff << ", ";
+
+        for (iVar = 0; iVar < nVar_Consv; iVar++) {
+          ConsVar = FlowSolver->node[iPoint]->GetSolution(iVar);
+          SurfFlow_file << scientific << ConsVar << ", ";
+        }
+
+        Mach = sqrt(FlowSolver->node[iPoint]->GetVelocity2()) / FlowSolver->node[iPoint]->GetSoundSpeed();
+        SurfFlow_file << scientific << Mach << endl;
+
+      }
+    }
+  }
+
+  SurfFlow_file.close();
+
+#else
+
+  int rank, iProcessor, nProcessor;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &nProcessor);
+
+  unsigned long Buffer_Send_nVertex[1], *Buffer_Recv_nVertex = NULL;
+  unsigned long nVertex_Surface = 0, nLocalVertex_Surface = 0;
+  unsigned long MaxLocalVertex_Surface = 0;
+
+  /*--- Find the max number of surface vertices among all
+   partitions and set up buffers. The master node will handle the
+   writing of the CSV file after gathering all of the data. ---*/
+
+  nLocalVertex_Surface = 0;
+  for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++)
+    if (config->GetMarker_All_Monitoring(iMarker) == YES)
+      for (iVertex = 0; iVertex < geometry->GetnVertex(iMarker); iVertex++) {
+        iPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+        if (geometry->node[iPoint]->GetDomain()) nLocalVertex_Surface++;
+      }
+
+  /*--- Communicate the number of local vertices on each partition
+   to the master node ---*/
+
+  Buffer_Send_nVertex[0] = nLocalVertex_Surface;
+  if (rank == MASTER_NODE) Buffer_Recv_nVertex = new unsigned long [nProcessor];
+
+  SU2_MPI::Allreduce(&nLocalVertex_Surface, &MaxLocalVertex_Surface, 1, MPI_UNSIGNED_LONG, MPI_MAX, MPI_COMM_WORLD);
+  SU2_MPI::Gather(&Buffer_Send_nVertex, 1, MPI_UNSIGNED_LONG, Buffer_Recv_nVertex, 1, MPI_UNSIGNED_LONG, MASTER_NODE, MPI_COMM_WORLD);
+
+  /*--- Send and Recv buffers ---*/
+
+  su2double *Buffer_Send_Normal = new su2double [MaxLocalVertex_Surface*nDim];
+  su2double *Buffer_Recv_Normal = NULL;
+
+  su2double *Buffer_Send_Coord_x = new su2double [MaxLocalVertex_Surface];
+  su2double *Buffer_Recv_Coord_x = NULL;
+
+  su2double *Buffer_Send_Coord_y = new su2double [MaxLocalVertex_Surface];
+  su2double *Buffer_Recv_Coord_y = NULL;
+
+  su2double *Buffer_Send_Coord_z = new su2double [MaxLocalVertex_Surface];
+  su2double *Buffer_Recv_Coord_z = NULL;
+
+  su2double *Buffer_Send_Press = new su2double [MaxLocalVertex_Surface];
+  su2double *Buffer_Recv_Press = NULL;
+
+  su2double *Buffer_Send_CPress = new su2double [MaxLocalVertex_Surface];
+  su2double *Buffer_Recv_CPress = NULL;
+
+  su2double *Buffer_Send_Mach = new su2double [MaxLocalVertex_Surface];
+  su2double *Buffer_Recv_Mach = NULL;
+
+  su2double *Buffer_Send_Consv = new su2double [MaxLocalVertex_Surface*nVar_Consv];
+  su2double *Buffer_Recv_Consv = NULL;
+
+  unsigned long *Buffer_Send_GlobalIndex = new unsigned long [MaxLocalVertex_Surface];
+  unsigned long *Buffer_Recv_GlobalIndex = NULL;
+
+  /*--- Prepare the receive buffers on the master node only. ---*/
+
+  if (rank == MASTER_NODE) {
+    Buffer_Recv_Normal = new su2double [nProcessor*MaxLocalVertex_Surface*nDim];
+    Buffer_Recv_Coord_x = new su2double [nProcessor*MaxLocalVertex_Surface];
+    Buffer_Recv_Coord_y = new su2double [nProcessor*MaxLocalVertex_Surface];
+    if (nDim == 3) Buffer_Recv_Coord_z = new su2double [nProcessor*MaxLocalVertex_Surface];
+    Buffer_Recv_Press   = new su2double [nProcessor*MaxLocalVertex_Surface];
+    Buffer_Recv_CPress  = new su2double [nProcessor*MaxLocalVertex_Surface];
+    Buffer_Recv_Mach    = new su2double [nProcessor*MaxLocalVertex_Surface];
+    Buffer_Recv_Consv = new su2double [nProcessor*MaxLocalVertex_Surface*nVar_Consv];
+    Buffer_Recv_GlobalIndex  = new unsigned long [nProcessor*MaxLocalVertex_Surface];
+  }
+
+  /*--- Loop over all vertices in this partition and load the
+   data of the specified type into the buffer to be sent to
+   the master node. ---*/
+
+  nVertex_Surface = 0;
+  for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++)
+    if (config->GetMarker_All_Monitoring(iMarker) == YES)
+      for (iVertex = 0; iVertex < geometry->GetnVertex(iMarker); iVertex++) {
+        iPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+        if (geometry->node[iPoint]->GetDomain()) {
+          Buffer_Send_Press[nVertex_Surface] = FlowSolver->node[iPoint]->GetPressure();
+          Buffer_Send_CPress[nVertex_Surface] = FlowSolver->GetCPressure(iMarker, iVertex);
+          Buffer_Send_Coord_x[nVertex_Surface] = geometry->node[iPoint]->GetCoord(0);
+          Buffer_Send_Coord_y[nVertex_Surface] = geometry->node[iPoint]->GetCoord(1);
+          if (nDim == 3) { Buffer_Send_Coord_z[nVertex_Surface] = geometry->node[iPoint]->GetCoord(2); }
+
+          Normal = geometry->vertex[iMarker][iVertex]->GetNormal();
+          for (iDim=0; iDim<nDim; iDim++)
+            Buffer_Send_Normal[nDim*nVertex_Surface+iDim] = Normal[iDim];
+
+          /*--- If US system, the output should be in inches ---*/
+
+          if (config->GetSystemMeasurements() == US) {
+            Buffer_Send_Coord_x[nVertex_Surface] *= 12.0;
+            Buffer_Send_Coord_y[nVertex_Surface] *= 12.0;
+            if (nDim == 3) Buffer_Send_Coord_z[nVertex_Surface] *= 12.0;
+          }
+
+          Buffer_Send_GlobalIndex[nVertex_Surface] = geometry->node[iPoint]->GetGlobalIndex();
+          Buffer_Send_Mach[nVertex_Surface] = sqrt(FlowSolver->node[iPoint]->GetVelocity2()) / FlowSolver->node[iPoint]->GetSoundSpeed();
+          for (iVar = 0; iVar < nVar_Consv; iVar++) {
+            Buffer_Send_Consv[nVertex_Surface*nVar_Consv+iVar] = FlowSolver->node[iPoint]->GetSolution(iVar);
+          }
+          nVertex_Surface++;
+        }
+      }
+
+  /*--- Send the information to the master node ---*/
+  SU2_MPI::Gather(Buffer_Send_Normal, MaxLocalVertex_Surface*nDim, MPI_DOUBLE, Buffer_Recv_Normal, MaxLocalVertex_Surface*nDim, MPI_DOUBLE, MASTER_NODE, MPI_COMM_WORLD);
+  SU2_MPI::Gather(Buffer_Send_Coord_x, MaxLocalVertex_Surface, MPI_DOUBLE, Buffer_Recv_Coord_x, MaxLocalVertex_Surface, MPI_DOUBLE, MASTER_NODE, MPI_COMM_WORLD);
+  SU2_MPI::Gather(Buffer_Send_Coord_y, MaxLocalVertex_Surface, MPI_DOUBLE, Buffer_Recv_Coord_y, MaxLocalVertex_Surface, MPI_DOUBLE, MASTER_NODE, MPI_COMM_WORLD);
+  if (nDim == 3) SU2_MPI::Gather(Buffer_Send_Coord_z, MaxLocalVertex_Surface, MPI_DOUBLE, Buffer_Recv_Coord_z, MaxLocalVertex_Surface, MPI_DOUBLE, MASTER_NODE, MPI_COMM_WORLD);
+  SU2_MPI::Gather(Buffer_Send_Press, MaxLocalVertex_Surface, MPI_DOUBLE, Buffer_Recv_Press, MaxLocalVertex_Surface, MPI_DOUBLE, MASTER_NODE, MPI_COMM_WORLD);
+  SU2_MPI::Gather(Buffer_Send_CPress, MaxLocalVertex_Surface, MPI_DOUBLE, Buffer_Recv_CPress, MaxLocalVertex_Surface, MPI_DOUBLE, MASTER_NODE, MPI_COMM_WORLD);
+  SU2_MPI::Gather(Buffer_Send_Mach, MaxLocalVertex_Surface, MPI_DOUBLE, Buffer_Recv_Mach, MaxLocalVertex_Surface, MPI_DOUBLE, MASTER_NODE, MPI_COMM_WORLD);
+  SU2_MPI::Gather(Buffer_Send_Consv, MaxLocalVertex_Surface*nVar_Consv, MPI_DOUBLE, Buffer_Recv_Consv, MaxLocalVertex_Surface*nVar_Consv, MPI_DOUBLE, MASTER_NODE, MPI_COMM_WORLD);
+  SU2_MPI::Gather(Buffer_Send_GlobalIndex, MaxLocalVertex_Surface, MPI_UNSIGNED_LONG, Buffer_Recv_GlobalIndex, MaxLocalVertex_Surface, MPI_UNSIGNED_LONG, MASTER_NODE, MPI_COMM_WORLD);
+
+  /*--- The master node unpacks the data and writes the surface CSV file ---*/
+
+  if (rank == MASTER_NODE) {
+
+    /*--- Write file name with extension if unsteady ---*/
+    char buffer[50];
+    string filename = config->GetSurfFlowCoeff_FileName();
+    ofstream SurfFlow_file;
+
+    /*--- Write file name with extension if unsteady ---*/
+    strcpy (cstr, filename.c_str());
+    SPRINTF (buffer, "_Monitored.csv");
+
+    strcat (cstr, buffer);
+    SurfFlow_file.precision(15);
+    SurfFlow_file.open(cstr, ios::out);
+
+    SurfFlow_file << "\"Global_Index\", \"x_coord\", \"y_coord\", ";
+    if (nDim == 3) SurfFlow_file << "\"z_coord\", ";
+
+    SurfFlow_file << "\"N_x\", \"N_y\", ";
+    if (nDim == 3) SurfFlow_file << "\"N_z\", ";
+
+    SurfFlow_file << "\"Pressure\", \"Pressure_Coefficient\", ";
+
+    for (iVar = 0; iVar < nVar_Consv; iVar++) {
+      SurfFlow_file << ",\"Conservative_" << iVar+1 << "\"";
+    }
+    SurfFlow_file <<  ", \"Mach_Number\"" << endl;
+
+    /*--- Loop through all of the collected data and write each node's values ---*/
+
+    unsigned long Total_Index;
+    for (iProcessor = 0; iProcessor < nProcessor; iProcessor++) {
+      for (iVertex = 0; iVertex < Buffer_Recv_nVertex[iProcessor]; iVertex++) {
+
+        /*--- Current index position and global index ---*/
+        Total_Index  = iProcessor*MaxLocalVertex_Surface+iVertex;
+        Global_Index = Buffer_Recv_GlobalIndex[Total_Index];
+
+        /*--- Retrieve the merged data for this node ---*/
+        xCoord = Buffer_Recv_Coord_x[Total_Index];
+        yCoord = Buffer_Recv_Coord_y[Total_Index];
+        if (nDim == 3) zCoord = Buffer_Recv_Coord_z[Total_Index];
+        Pressure   = Buffer_Recv_Press[Total_Index];
+        PressCoeff = Buffer_Recv_CPress[Total_Index];
+
+        /*--- Write the first part of the data ---*/
+        SurfFlow_file << scientific << Global_Index << ", " << xCoord << ", " << yCoord << ", ";
+        if (nDim == 3) SurfFlow_file << scientific << zCoord << ", ";
+
+        for (iDim=0; iDim<nDim; iDim++)
+          SurfFlow_file << scientific << Buffer_Recv_Normal[nDim*Total_Index+iDim] << ", ";
+
+        SurfFlow_file << scientific << Pressure << ", " << PressCoeff << ", ";
+
+        for (iVar = 0; iVar < nVar_Consv; iVar++) {
+          SurfFlow_file << scientific << Buffer_Recv_Consv[Total_Index*nVar_Consv+iVar] << ", ";
+        }
+
+        Mach = Buffer_Recv_Mach[Total_Index];
+        SurfFlow_file << scientific << Mach << endl;
+
+      }
+    }
+
+    /*--- Close the CSV file ---*/
+    SurfFlow_file.close();
+
+    /*--- Release the recv buffers on the master node ---*/
+    delete [] Buffer_Recv_Normal;
+    delete [] Buffer_Recv_Coord_x;
+    delete [] Buffer_Recv_Coord_y;
+    if (nDim == 3) delete [] Buffer_Recv_Coord_z;
+    delete [] Buffer_Recv_Press;
+    delete [] Buffer_Recv_CPress;
+    delete [] Buffer_Recv_Mach;
+    delete [] Buffer_Recv_Consv;
+    delete [] Buffer_Recv_GlobalIndex;
+
+    delete [] Buffer_Recv_nVertex;
+
+  }
+
+  /*--- Release the memory for the remaining buffers and exit ---*/
+  delete [] Buffer_Send_Normal;
+  delete [] Buffer_Send_Coord_x;
+  delete [] Buffer_Send_Coord_y;
+  delete [] Buffer_Send_Coord_z;
+  delete [] Buffer_Send_Press;
+  delete [] Buffer_Send_CPress;
+  delete [] Buffer_Send_Mach;
+  delete [] Buffer_Send_Consv;
+  delete [] Buffer_Send_GlobalIndex;
+
+#endif
+
+}
+
+
+
 void COutput::SetSurfaceCSV_Adjoint(CConfig *config, CGeometry *geometry, CSolver *AdjSolver, CSolver *FlowSolution, unsigned long iExtIter, unsigned short val_iZone) {
   
 #ifndef HAVE_MPI
@@ -6555,6 +6862,7 @@ void COutput::SetResult_Files(CSolver ****solver_container, CGeometry ***geometr
     
     bool Wrt_Vol = config[iZone]->GetWrt_Vol_Sol();
     bool Wrt_Srf = config[iZone]->GetWrt_Srf_Sol();
+    bool Wrt_1D = config[iZone]->GetWrt_1D_Output();
     
 #ifdef HAVE_MPI
     /*--- Do not merge the volume solutions if we are running in parallel.
@@ -6576,8 +6884,10 @@ void COutput::SetResult_Files(CSolver ****solver_container, CGeometry ***geometr
       case EULER : case NAVIER_STOKES : case RANS :
         
         if (Wrt_Csv) SetSurfaceCSV_Flow(config[iZone], geometry[iZone][MESH_0], solver_container[iZone][MESH_0][FLOW_SOL], iExtIter, iZone);
+        if (Wrt_1D) SetMonitoredCSV(config[iZone], geometry[iZone][MESH_0], solver_container[iZone][MESH_0][FLOW_SOL], iExtIter, iZone);
         break;
         
+
       case ADJ_EULER : case ADJ_NAVIER_STOKES : case ADJ_RANS : case DISC_ADJ_EULER: case DISC_ADJ_NAVIER_STOKES: case DISC_ADJ_RANS:
         if (Wrt_Csv) SetSurfaceCSV_Adjoint(config[iZone], geometry[iZone][MESH_0], solver_container[iZone][MESH_0][ADJFLOW_SOL], solver_container[iZone][MESH_0][FLOW_SOL], iExtIter, iZone);
         break;

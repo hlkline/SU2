@@ -574,7 +574,7 @@ def findiff( config, state=None, step=1e-4 ):
                 # Use custom DV
                 if (konfig.DV_KIND[i_dv] == 'CUSTOM'):
                     grads['OUTFLOW_GENERALIZED'][i_dv] = chaingrad[4+custom_dv]
-                    custom_dv = custom_dv+1
+                    custom_dv +=1
                     
                 #: for each grad name
                     

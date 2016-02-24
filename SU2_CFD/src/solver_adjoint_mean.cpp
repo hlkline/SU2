@@ -335,48 +335,6 @@ CAdjEulerSolver::CAdjEulerSolver(CGeometry *geometry, CConfig *config, unsigned 
 
   
 
-  /*--- If generalized outflow adjoint is used, read in the externally-defined gradients ---*/
-  if (config->GetKind_ObjFunc()==OUTFLOW_GENERALIZED){
-    su2double NewGrad[5];
-
-    /*--- Check whether a surface file exists for input ---*/
-    gradient_filename = config->GetGradient_FileName();
-    gradient_file.open(gradient_filename.data(), ios::in);
-
-    /*--- A surface file does not exist, so write a new one for the
-    markers that are specified as part of the motion. ---*/
-    if (gradient_file.fail()) {
-
-      if (rank == MASTER_NODE)
-        cout << "No gradient file found. All gradients will be set to 0." << endl;
-      gradient_file.close();
-    }
-    else{
-      /*--- Read in and store the new gradient values ---*/
-
-      while (getline(gradient_file, text_line)) {
-        istringstream point_line(text_line);
-        point_line >> iPoint >> NewGrad[0] >> NewGrad[1] >> NewGrad[2] >> NewGrad[3] >> NewGrad[4];
-        for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
-          if (config->GetMarker_All_Monitoring(iMarker) == YES) {
-            for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
-              jPoint = geometry->vertex[iMarker][iVertex]->GetNode();
-              GlobalIndex = geometry->node[jPoint]->GetGlobalIndex();
-              if (GlobalIndex == iPoint) {
-                node[jPoint]->SetGenAdj_Grad(NewGrad);
-                break;
-              }
-            }
-          }
-        }
-      }
-      /*--- Close the restart file ---*/
-      gradient_file.close();
-    }
-  }
-
-
-
   /*--- Calculate area monitored for area-averaged-outflow-quantity-based objectives ---*/
   myArea_Monitored = 0.0;
   if (config->GetKind_ObjFunc()==OUTFLOW_GENERALIZED || config->GetKind_ObjFunc()==AVG_TOTAL_PRESSURE ||
@@ -403,6 +361,64 @@ CAdjEulerSolver::CAdjEulerSolver(CGeometry *geometry, CConfig *config, unsigned 
 #else
   Area_Monitored = myArea_Monitored;
 #endif
+
+
+  /*--- If generalized outflow adjoint is used, read in the externally-defined gradients ---*/
+  if (config->GetKind_ObjFunc()==OUTFLOW_GENERALIZED){
+    su2double NewGrad[5];
+
+    /*--- Check whether a surface file exists for input ---*/
+    gradient_filename = config->GetGradient_FileName();
+    gradient_file.open(gradient_filename.data(), ios::in);
+
+    /*--- A surface file does not exist, so write a new one for the
+    markers that are specified as part of the motion. ---*/
+    if (gradient_file.fail()) {
+
+      if (rank == MASTER_NODE)
+        cout << "No gradient file found. All gradients will be set to value in OBJ_CHAIN_RULE_COEFF (0.0 if not provided)." << endl;
+      gradient_file.close();
+      /*-- Set to value provided in chain rule coefficient --*/
+      for (iVar=0; iVar<5; iVar++){
+        NewGrad[iVar] = config->GetCoeff_ObjChainRule(iVar)/Area_Monitored;
+      }
+
+      for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
+        if (config->GetMarker_All_Monitoring(iMarker) == YES) {
+          for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+            iPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+            if (geometry->node[iPoint]->GetDomain())
+              node[iPoint]->SetGenAdj_Grad(NewGrad);
+          }
+        }
+      }
+
+    }
+    else{
+      /*--- Read in and store the new gradient values ---*/
+
+      while (getline(gradient_file, text_line)) {
+        istringstream point_line(text_line);
+        point_line >> iPoint >> NewGrad[0] >> NewGrad[1] >> NewGrad[2] >> NewGrad[3] >> NewGrad[4];
+        if (geometry->node[iPoint]->GetDomain()) {
+          for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
+            if (config->GetMarker_All_Monitoring(iMarker) == YES) {
+              for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+                jPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+                GlobalIndex = geometry->node[jPoint]->GetGlobalIndex();
+                if (GlobalIndex == iPoint) {
+                  node[jPoint]->SetGenAdj_Grad(NewGrad);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+      /*--- Close the restart file ---*/
+      gradient_file.close();
+    }
+  }
 
 
   /*--- MPI solution ---*/
