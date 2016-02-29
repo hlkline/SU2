@@ -101,8 +101,8 @@ def projection( config, state={}, step = 1e-3 ):
     os.remove(grad_filename)
     
     info = su2io.State()
-    
-    if (objective == 'OUTFLOW_GENERALIZED') and ('CUSTOM' in konfig.DV_KIND):
+     
+    if ('OUTFLOW_GENERALIZED' in objective) and ('CUSTOM' in konfig.DV_KIND):
         import downstream_function # Must be defined in run folder
         chaingrad = downstream_function.downstream_gradient(konfig,state,step)
         n_dv = len(raw_gradients)
@@ -120,7 +120,11 @@ def projection( config, state={}, step = 1e-3 ):
     su2util.write_plot(grad_plotname,output_format,data_plot)
 
     # gradient output dictionary
-    gradients = { objective : raw_gradients }
+    objective = objective.split(',')
+    if (len(objective)>1 and konfig.COMBINE_OBJECTIVE=="YES"):
+        objective = ['COMBO']
+
+    gradients = { objective[0] : raw_gradients }
     
     # info out
     info.GRADIENTS.update( gradients )

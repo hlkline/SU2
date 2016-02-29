@@ -208,6 +208,7 @@ def get_headerMap():
                  "Avg_Mach"        : "AVG_OUTLET_MACH"         ,
                  "Avg_Temperature" : "AVG_OUTLET_TEMPERATURE"  ,
                  "MassFlowRate"    : "MASS_FLOW_RATE"          ,
+                 "ComboObj"        : "COMBO"                   ,
                  "Time(min)"       : "TIME"                    ,
                  "D(CLift)"        : "D_LIFT"                  ,
                  "D(CDrag)"        : "D_DRAG"                  ,
@@ -218,7 +219,8 @@ def get_headerMap():
                  "D(CFx)"          : "D_FORCE_X"               ,
                  "D(CFy)"          : "D_FORCE_Y"               ,
                  "D(CFz)"          : "D_FORCE_Z"               ,
-                 "D(CL/CD)"        : "D_EFFICIENCY"}
+                 "D(CL/CD)"        : "D_EFFICIENCY"            ,
+                 "ComboObj"        : "COMBO"}
     
     return map_dict
 
@@ -255,7 +257,8 @@ optnames_aero = [ "LIFT"                    ,
                   "INVERSE_DESIGN_PRESSURE" ,
                   "INVERSE_DESIGN_HEATFLUX" ,
                   "TOTAL_HEATFLUX"          ,
-                  "MAXIMUM_HEATFLUX"        ]
+                  "MAXIMUM_HEATFLUX"        ,
+                  "COMBO"]
 #: optnames_aero
 
 optnames_stab = [ "D_LIFT_D_ALPHA"               ,
@@ -473,20 +476,26 @@ def get_adjointSuffix(objective_function=None):
                  "AVG_TOTAL_PRESSURE"      : "pt"        ,
                  "AVG_OUTLET_PRESSURE"     : "pe"        ,
                  "MASS_FLOW_RATE"          : "mfr"       ,
-                 "OUTFLOW_GENERALIZED"       : "chn"       ,
-                 "FREE_SURFACE"            : "fs"       }
+                 "OUTFLOW_GENERALIZED"     : "chn"       ,
+                 "FREE_SURFACE"            : "fs"        ,
+                 "COMBO"                   : "combo"}
     
     # if none or false, return map
     if not objective_function:
         return name_map
-    
-    # return desired objective function suffix
-    elif name_map.has_key(objective_function):
-        return name_map[objective_function]
-    
-    # otherwise...
     else:
-        raise Exception('Unrecognized adjoint function name')
+        # remove white space
+        objective = ''.join(objective_function.split())
+        objective = objective.split(",")
+        nObj = len(objective)
+        if (nObj>1):
+            return "combo"
+        if name_map.has_key(objective[0]):
+            return name_map[objective[0]]
+    
+        # otherwise...
+        else:
+            raise Exception('Unrecognized adjoint function name')
     
 #: def get_adjointSuffix()
     

@@ -509,8 +509,12 @@ int main(int argc, char *argv[]) {
         surface_movement->SetParabolic(geometry_container[ZONE_0], config_container[ZONE_0]);
       }
 
-      else if (config_container[ZONE_0]->GetDesign_Variable(iDV) == CUSTOM and rank==MASTER_NODE)
-        cout <<"Custom design variable will be used in external script" << endl;
+      else if (config_container[ZONE_0]->GetDesign_Variable(iDV) == CUSTOM and rank==MASTER_NODE){
+        cout << endl << "Design variable number "<< iDV <<"." << endl;
+        cout <<"Custom design variable will be used in external script."<<endl;
+        cout <<"Gradient information will be written to an output file by python tools" << endl;
+      }
+
 
       /*--- Design variable not implement ---*/
 
@@ -520,8 +524,10 @@ int main(int argc, char *argv[]) {
       }
 
       /*--- Continuous adjoint gradient computation ---*/
-      if (rank == MASTER_NODE)
-        cout << "Evaluate functional gradient using the continuous adjoint strategy." << endl;
+      if (rank == MASTER_NODE){
+        if (config_container[ZONE_0]->GetDesign_Variable(iDV)!=CUSTOM)
+          cout << "Evaluate functional gradient using the continuous adjoint strategy." << endl;
+      }
 
       /*--- Load the delta change in the design variable (finite difference step). ---*/
 
@@ -579,82 +585,100 @@ int main(int argc, char *argv[]) {
 #endif
 
       if (rank == MASTER_NODE) {
-        switch (config_container[ZONE_0]->GetKind_ObjFunc()) {
-          case LIFT_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Lift coeff. grad. using cont. adj." << endl;
-            cout << "Lift coefficient gradient: "<< Gradient << "." << endl; break;
-          case DRAG_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Drag coeff. grad. using cont. adj." << endl;
-            cout << "Drag coefficient gradient: "<< Gradient << "." << endl; break;
-          case SIDEFORCE_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Sideforce coeff. grad. using cont. adj." << endl;
-            cout << "Sideforce coefficient gradient: "<< Gradient << "." << endl; break;
-          case INVERSE_DESIGN_PRESSURE :
-            if (iDV == 0) Gradient_file << "Pressure inverse design using cont. adj."<< endl;
-            cout << "Pressure inverse design gradient: "<< Gradient << "." << endl; break;
-          case INVERSE_DESIGN_HEATFLUX :
-            if (iDV == 0) Gradient_file << "Heat inverse design using cont. adj."<< endl;
-            cout << "Heat flux inverse design gradient: "<< Gradient << "." << endl; break;
-          case TOTAL_HEATFLUX :
-            if (iDV == 0) Gradient_file << "Integrated surface heat flux. using cont. adj."<< endl;
-            cout << "Total heat flux gradient: "<< Gradient << "." << endl; break;
-          case MAXIMUM_HEATFLUX :
-            if (iDV == 0) Gradient_file << "Integrated surface heat flux. using cont. adj."<< endl;
-            cout << "Maximum heat flux gradient: "<< Gradient << "." << endl; break;
-          case MOMENT_X_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Moment x coeff. grad. using cont. adj." << endl;
-            cout << "Moment x coefficient gradient: "<< Gradient << "." << endl; break;
-          case MOMENT_Y_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Moment y coeff. grad. using cont. adj." << endl;
-            cout << "Moment y coefficient gradient: "<< Gradient << "." << endl; break;
-          case MOMENT_Z_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Moment z coeff. grad. using cont. adj." << endl;
-            cout << "Moment z coefficient gradient: "<< Gradient << "." << endl; break;
-          case EFFICIENCY :
-            if (iDV == 0) Gradient_file << "Efficiency coeff. grad. using cont. adj." << endl;
-            cout << "Efficiency coefficient gradient: "<< Gradient << "." << endl; break;
-          case EQUIVALENT_AREA :
-            if (iDV == 0) Gradient_file << "Equivalent area coeff. grad. using cont. adj." << endl;
-            cout << "Equivalent Area coefficient gradient: "<< Gradient << "." << endl; break;
-          case NEARFIELD_PRESSURE :
-            if (iDV == 0) Gradient_file << "Near-field pressure coeff. grad. using cont. adj." << endl;
-            cout << "Near-field pressure coefficient gradient: "<< Gradient << "." << endl; break;
-          case FORCE_X_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Force x coeff. grad. using cont. adj." << endl;
-            cout << "Force x coefficient gradient: "<< Gradient << "." << endl; break;
-          case FORCE_Y_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Force y coeff. grad. using cont. adj." << endl;
-            cout << "Force y coefficient gradient: "<< Gradient << "." << endl; break;
-          case FORCE_Z_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Force z coeff. grad. using cont. adj." << endl;
-            cout << "Force z coefficient gradient: "<< Gradient << "." << endl; break;
-          case THRUST_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Thrust coeff. grad. using cont. adj."<< endl;
-            cout << "Thrust coefficient gradient: "<< Gradient << "." << endl; break;
-          case TORQUE_COEFFICIENT :
-            if (iDV == 0) Gradient_file << "Torque coeff. grad. using cont. adj."<< endl;
-            cout << "Torque coefficient gradient: "<< Gradient << "." << endl; break;
-          case FIGURE_OF_MERIT :
-            if (iDV == 0) Gradient_file << "Rotor Figure of Merit grad. using cont. adj."<< endl;
-            cout << "Rotor Figure of Merit gradient: "<< Gradient << "." << endl; break;
-          case FREE_SURFACE :
-            if (iDV == 0) Gradient_file << "Free-Surface grad. using cont. adj."<< endl;
-            cout << "Free-surface gradient: "<< Gradient << "." << endl; break;
-          case MASS_FLOW_RATE :
-            if (iDV == 0) Gradient_file << "Mass flow rate grad. using cont. adj."<< endl;
-            cout << "Mass flow rate gradient: "<< Gradient << "." << endl; break;
-          case AVG_OUTLET_PRESSURE :
-            if (iDV == 0) Gradient_file << "Average outlet presure grad. using cont. adj."<< endl;
-            cout << "Average outlet pressure gradient: "<< Gradient << "." << endl; break;
-          case AVG_TOTAL_PRESSURE :
-            if (iDV == 0) Gradient_file << "Average total presure grad. using cont. adj."<< endl;
-            cout << "Average total pressure gradient: "<< Gradient << "." << endl; break;
-          case OUTFLOW_GENERALIZED :
-             if (iDV == 0) Gradient_file << "Generalized outflow gradient cont. adj."<< endl;
-             cout << "Generalized outflow gradient: "<< Gradient << "." << endl; break;
-
+        if (config_container[ZONE_0]->GetnObj()>1){
+          if (iDV == 0){
+            Gradient_file << "Combo obj. grad. using cont. adj." << endl;
+          }
+          if (config_container[ZONE_0]->GetDesign_Variable(iDV)!=CUSTOM){
+            cout << "Combo objective gradient: "<< Gradient << "." << endl;
+          }
+          else
+            cout << "Combo objective gradient will be computed in external file for custom D.V." << endl;
         }
+        else{
+          if (config_container[ZONE_0]->GetDesign_Variable(iDV)==CUSTOM and config_container[ZONE_0]->GetKind_ObjFunc()!=OUTFLOW_GENERALIZED){
+            Gradient = 0.0; /* -- unless outflow generalized is used, the Custom DV should be ignored -- */
+          }
+          switch (config_container[ZONE_0]->GetKind_ObjFunc()) {
+            case LIFT_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Lift coeff. grad. using cont. adj." << endl;
+              cout << "Lift coefficient gradient: "<< Gradient << "." << endl; break;
+            case DRAG_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Drag coeff. grad. using cont. adj." << endl;
+              cout << "Drag coefficient gradient: "<< Gradient << "." << endl; break;
+            case SIDEFORCE_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Sideforce coeff. grad. using cont. adj." << endl;
+              cout << "Sideforce coefficient gradient: "<< Gradient << "." << endl; break;
+            case INVERSE_DESIGN_PRESSURE :
+              if (iDV == 0) Gradient_file << "Pressure inverse design using cont. adj."<< endl;
+              cout << "Pressure inverse design gradient: "<< Gradient << "." << endl; break;
+            case INVERSE_DESIGN_HEATFLUX :
+              if (iDV == 0) Gradient_file << "Heat inverse design using cont. adj."<< endl;
+              cout << "Heat flux inverse design gradient: "<< Gradient << "." << endl; break;
+            case TOTAL_HEATFLUX :
+              if (iDV == 0) Gradient_file << "Integrated surface heat flux. using cont. adj."<< endl;
+              cout << "Total heat flux gradient: "<< Gradient << "." << endl; break;
+            case MAXIMUM_HEATFLUX :
+              if (iDV == 0) Gradient_file << "Integrated surface heat flux. using cont. adj."<< endl;
+              cout << "Maximum heat flux gradient: "<< Gradient << "." << endl; break;
+            case MOMENT_X_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Moment x coeff. grad. using cont. adj." << endl;
+              cout << "Moment x coefficient gradient: "<< Gradient << "." << endl; break;
+            case MOMENT_Y_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Moment y coeff. grad. using cont. adj." << endl;
+              cout << "Moment y coefficient gradient: "<< Gradient << "." << endl; break;
+            case MOMENT_Z_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Moment z coeff. grad. using cont. adj." << endl;
+              cout << "Moment z coefficient gradient: "<< Gradient << "." << endl; break;
+            case EFFICIENCY :
+              if (iDV == 0) Gradient_file << "Efficiency coeff. grad. using cont. adj." << endl;
+              cout << "Efficiency coefficient gradient: "<< Gradient << "." << endl; break;
+            case EQUIVALENT_AREA :
+              if (iDV == 0) Gradient_file << "Equivalent area coeff. grad. using cont. adj." << endl;
+              cout << "Equivalent Area coefficient gradient: "<< Gradient << "." << endl; break;
+            case NEARFIELD_PRESSURE :
+              if (iDV == 0) Gradient_file << "Near-field pressure coeff. grad. using cont. adj." << endl;
+              cout << "Near-field pressure coefficient gradient: "<< Gradient << "." << endl; break;
+            case FORCE_X_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Force x coeff. grad. using cont. adj." << endl;
+              cout << "Force x coefficient gradient: "<< Gradient << "." << endl; break;
+            case FORCE_Y_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Force y coeff. grad. using cont. adj." << endl;
+              cout << "Force y coefficient gradient: "<< Gradient << "." << endl; break;
+            case FORCE_Z_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Force z coeff. grad. using cont. adj." << endl;
+              cout << "Force z coefficient gradient: "<< Gradient << "." << endl; break;
+            case THRUST_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Thrust coeff. grad. using cont. adj."<< endl;
+              cout << "Thrust coefficient gradient: "<< Gradient << "." << endl; break;
+            case TORQUE_COEFFICIENT :
+              if (iDV == 0) Gradient_file << "Torque coeff. grad. using cont. adj."<< endl;
+              cout << "Torque coefficient gradient: "<< Gradient << "." << endl; break;
+            case FIGURE_OF_MERIT :
+              if (iDV == 0) Gradient_file << "Rotor Figure of Merit grad. using cont. adj."<< endl;
+              cout << "Rotor Figure of Merit gradient: "<< Gradient << "." << endl; break;
+            case FREE_SURFACE :
+              if (iDV == 0) Gradient_file << "Free-Surface grad. using cont. adj."<< endl;
+              cout << "Free-surface gradient: "<< Gradient << "." << endl; break;
+            case MASS_FLOW_RATE :
+              if (iDV == 0) Gradient_file << "Mass flow rate grad. using cont. adj."<< endl;
+              cout << "Mass flow rate gradient: "<< Gradient << "." << endl; break;
+            case AVG_OUTLET_PRESSURE :
+              if (iDV == 0) Gradient_file << "Average outlet presure grad. using cont. adj."<< endl;
+              cout << "Average outlet pressure gradient: "<< Gradient << "." << endl; break;
+            case AVG_TOTAL_PRESSURE :
+              if (iDV == 0) Gradient_file << "Average total presure grad. using cont. adj."<< endl;
+              cout << "Average total pressure gradient: "<< Gradient << "." << endl; break;
+            case OUTFLOW_GENERALIZED :
+               if (iDV == 0) Gradient_file << "Generalized outflow gradient cont. adj."<< endl;
+               if (config_container[ZONE_0]->GetDesign_Variable(iDV)!=CUSTOM)
+                 cout << "Generalized outflow gradient: "<< Gradient << "." << endl;
+               else
+                 cout << "Generalized outflow gradient will be computed in external file for custom D.V." << endl;
+               break;
 
+          }
+        }
         Gradient_file << Gradient << endl;
 
         cout <<"-------------------------------------------------------------------------" << endl;
