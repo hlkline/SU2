@@ -5650,7 +5650,6 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
    Area_Monitored = myArea_Monitored;
  #endif
 
-
    /*--- If generalized outflow adjoint is used, read in the externally-defined gradients ---*/
    if (config->GetKind_ObjFunc()==OUTFLOW_GENERALIZED){
      su2double NewGrad[5];
@@ -5662,7 +5661,6 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
      /*--- A surface file does not exist, so write a new one for the
      markers that are specified as part of the motion. ---*/
      if (gradient_file.fail()) {
-
        if (rank == MASTER_NODE)
          cout << "No gradient file found. All gradients will be set to value in OBJ_CHAIN_RULE_COEFF (0.0 if not provided)." << endl;
        gradient_file.close();
@@ -5684,20 +5682,17 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
      }
      else{
        /*--- Read in and store the new gradient values ---*/
-
        while (getline(gradient_file, text_line)) {
          istringstream point_line(text_line);
          point_line >> iPoint >> NewGrad[0] >> NewGrad[1] >> NewGrad[2] >> NewGrad[3] >> NewGrad[4];
-         if (geometry->node[iPoint]->GetDomain()) {
-           for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
-             if (config->GetMarker_All_Monitoring(iMarker) == YES) {
-               for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
-                 jPoint = geometry->vertex[iMarker][iVertex]->GetNode();
-                 GlobalIndex = geometry->node[jPoint]->GetGlobalIndex();
-                 if (GlobalIndex == iPoint) {
-                   node[jPoint]->SetGenAdj_Grad(NewGrad);
-                   break;
-                 }
+         for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
+           if (config->GetMarker_All_Monitoring(iMarker) == YES) {
+             for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+               jPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+               GlobalIndex = geometry->node[jPoint]->GetGlobalIndex();
+               if (GlobalIndex == iPoint and geometry->node[jPoint]->GetDomain()) {
+                 node[jPoint]->SetGenAdj_Grad(NewGrad);
+                 break;
                }
              }
            }
