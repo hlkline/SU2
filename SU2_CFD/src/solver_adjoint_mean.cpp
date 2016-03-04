@@ -5359,10 +5359,10 @@ void CAdjEulerSolver::SetResidual_DualTime(CGeometry *geometry, CSolver **solver
 CAdjNSSolver::CAdjNSSolver(void) : CAdjEulerSolver() { }
 
 CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short iMesh) : CAdjEulerSolver() {
-  unsigned long iPoint, index, iVertex;
-  string text_line, mesh_filename;
+  unsigned long iPoint, index, iVertex, jPoint, GlobalIndex;
+  string text_line, mesh_filename, gradient_filename;
   unsigned short iDim, iVar, iMarker, nLineLets;
-  ifstream restart_file;
+  ifstream restart_file, gradient_file;
   string filename, AdjExt;
 
   su2double RefAreaCoeff    = config->GetRefAreaCoeff();
@@ -5387,7 +5387,7 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
   
   /*--- Norm heat flux objective test ---*/
   
-  pnorm = 10;
+  pnorm = 1.0;
   
   /*--- Set the gamma value ---*/
   
@@ -5649,6 +5649,64 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
  #else
    Area_Monitored = myArea_Monitored;
  #endif
+
+
+   /*--- If generalized outflow adjoint is used, read in the externally-defined gradients ---*/
+   if (config->GetKind_ObjFunc()==OUTFLOW_GENERALIZED){
+     su2double NewGrad[5];
+
+     /*--- Check whether a surface file exists for input ---*/
+     gradient_filename = config->GetGradient_FileName();
+     gradient_file.open(gradient_filename.data(), ios::in);
+
+     /*--- A surface file does not exist, so write a new one for the
+     markers that are specified as part of the motion. ---*/
+     if (gradient_file.fail()) {
+
+       if (rank == MASTER_NODE)
+         cout << "No gradient file found. All gradients will be set to value in OBJ_CHAIN_RULE_COEFF (0.0 if not provided)." << endl;
+       gradient_file.close();
+       /*-- Set to value provided in chain rule coefficient --*/
+       for (iVar=0; iVar<5; iVar++){
+         NewGrad[iVar] = config->GetCoeff_ObjChainRule(iVar)/Area_Monitored;
+       }
+
+       for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
+         if (config->GetMarker_All_Monitoring(iMarker) == YES) {
+           for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+             iPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+             if (geometry->node[iPoint]->GetDomain())
+               node[iPoint]->SetGenAdj_Grad(NewGrad);
+           }
+         }
+       }
+
+     }
+     else{
+       /*--- Read in and store the new gradient values ---*/
+
+       while (getline(gradient_file, text_line)) {
+         istringstream point_line(text_line);
+         point_line >> iPoint >> NewGrad[0] >> NewGrad[1] >> NewGrad[2] >> NewGrad[3] >> NewGrad[4];
+         if (geometry->node[iPoint]->GetDomain()) {
+           for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
+             if (config->GetMarker_All_Monitoring(iMarker) == YES) {
+               for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+                 jPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+                 GlobalIndex = geometry->node[jPoint]->GetGlobalIndex();
+                 if (GlobalIndex == iPoint) {
+                   node[jPoint]->SetGenAdj_Grad(NewGrad);
+                   break;
+                 }
+               }
+             }
+           }
+         }
+       }
+       /*--- Close the restart file ---*/
+       gradient_file.close();
+     }
+   }
 
    if (config->GetnObj()>1){
      if (grid_movement) {
@@ -7138,8 +7196,9 @@ void CAdjNSSolver::BC_Isothermal_Wall(CGeometry *geometry, CSolver **solver_cont
 //        Xi = 1.0;
         for (iDim = 0; iDim < nDim; iDim++)
           kGTdotn += Thermal_Conductivity*GradT[iDim]*Normal[iDim];
-        //q = - Xi * pnorm * pow(kGTdotn, pnorm-1.0);
-        q = -1.0*obj_weight;
+        //q = - Xi * pnorm * pow(kGTdotn, pnorm-1.0)*obj_weight;
+        q = - 1.0 * pnorm * pow(kGTdotn, pnorm-1.0)*obj_weight;
+        //q = -1.0*obj_weight;
       }
       
       /*--- Strong BC enforcement of the energy equation ---*/
