@@ -457,7 +457,7 @@ def read_config(filename):
                     this_obj = this_obj.split("*")
                     this_name  = this_obj[0]
                     this_scale = 1.0
-                    if len(this_value) > 1:
+                    if len(this_obj) > 1:
                         this_scale = float( this_obj[1] )
                     this_def.update({ this_name : {'SCALE':this_scale} })
                 # save to output dictionary
