@@ -592,7 +592,7 @@ def findiff( config, state=None, step=1e-4 ):
                         grads[key].append(this_grad)
                         
                 # Use custom DV
-                if (konfig.DV_KIND[i_dv] == 'CUSTOM'):
+                if (konfig.DV_KIND[i_dv] == 'CUSTOM' and 'OUTFLOW_GENERALIZED' in grads.keys()):
                     grads['OUTFLOW_GENERALIZED'][i_dv] = chaingrad[4+custom_dv]
                     custom_dv +=1
                     
