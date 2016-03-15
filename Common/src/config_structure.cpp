@@ -1613,6 +1613,7 @@ void CConfig::SetPostprocessing(unsigned short val_software, unsigned short val_
       }
     }
     /*--- Make sure that 1D outputs are written when objective function requires [TODO: does this make config options irrelevant?]---*/
+    /*
     unsigned short jMarker=0;
     nMarker_Out_1D = 0;
     for (iMarker=0; iMarker<nMarker_Monitoring; iMarker++){
@@ -1628,6 +1629,7 @@ void CConfig::SetPostprocessing(unsigned short val_software, unsigned short val_
         jMarker++;
       }
     }
+    */
   }
 
   /*--- Low memory only for ASCII Tecplot ---*/
