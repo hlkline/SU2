@@ -290,7 +290,8 @@ def obj_df(dvs,config,state=None):
         for i_obj,this_obj in enumerate(objectives):
             scale = def_objs[this_obj]['SCALE']
             sign  = su2io.get_objectiveSign(this_obj)
-            config['MARKER_MONITORING'] = marker_monitored[i_obj]
+            if n_obj>1:
+                config['MARKER_MONITORING'] = marker_monitored[i_obj]
 
             # Evaluate Objective Gradient
     #        sys.stdout.write('  %s... ' % this_obj.title())
