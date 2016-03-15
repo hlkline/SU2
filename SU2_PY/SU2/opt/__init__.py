@@ -2,3 +2,5 @@
 
 from project import Project
 from scipy_tools import scipy_slsqp as SLSQP
+from scipy_tools import pyopt_slsqp as PYOPTSLSQP
+from scipy_tools import pyopt_snopt as SNOPT

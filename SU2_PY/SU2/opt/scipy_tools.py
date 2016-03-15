@@ -41,6 +41,218 @@ from numpy.linalg import norm
 
 
 # -------------------------------------------------------------------
+#  pyOpt Optimizers
+# -------------------------------------------------------------------
+# format needed by pyopt
+def obj_func(x, *args, **kwargs):
+    project = kwargs['p1']
+    f = obj_f(x,project)
+    g = 0.0
+    fail = 0
+    return f,g,fail
+
+def grad_func(x,f,g, *args, **kwargs):
+    project = kwargs['p1']
+    g_obj = [0.0]*project.n_dv
+    grad = obj_df(x,project)
+    for i in range(project.n_dv):
+        g_obj[i] =grad[i]
+    g_con=zeros([1,project.n_dv])
+    fail = 0
+    return g_obj, g_con, fail
+
+
+# -------------------------------------------------------------------
+#  pyOpt SLSQP
+# -------------------------------------------------------------------
+def pyopt_snopt(project,x0=None,xb=None,its=100,accu=1e-10,grads=True):
+    """ result = scipy_slsqp(project,x0=[],xb=[],its=100,accu=1e-10)
+    
+        Runs the Scipy implementation of SLSQP with 
+        an SU2 project
+        
+        Inputs:
+            project - an SU2 project
+            x0      - optional, initial guess
+            xb      - optional, design variable bounds
+            its     - max outer iterations, default 100
+            accu    - accuracy, default 1e-10
+        
+        Outputs:
+           result - the outputs from scipy.fmin_slsqp
+    """
+        # import scipy optimizer
+    import pyOpt
+    from pyOpt import pySNOPT
+    # handle input cases
+    if x0 is None: x0 = []
+    if xb is None: xb = []
+    
+    # function handles
+    func           = obj_f
+    f_eqcons       = con_ceq
+    f_ieqcons      = con_cieq 
+    
+    # gradient handles
+    if project.config.get('GRADIENT_METHOD','NONE') == 'NONE': 
+        fprime         = None
+        fprime_eqcons  = None
+        fprime_ieqcons = None
+    else:
+        fprime         = obj_df
+        fprime_eqcons  = con_dceq
+        fprime_ieqcons = con_dcieq        
+    
+    # number of design variables
+    n_dv = len( project.config['DEFINITION_DV']['KIND'] )
+    project.n_dv = n_dv
+    
+    # Initial guess
+    if not x0: x0 = [0.0]*n_dv
+    
+    # prescale x0
+    dv_scales = project.config['DEFINITION_DV']['SCALE']
+    x0 = [ x0[i]/dv_scl for i,dv_scl in enumerate(dv_scales) ]    
+    
+    # scale accuracy
+    obj = project.config['OPT_OBJECTIVE']
+    obj_scale = []
+    for this_obj in obj.keys():
+        obj_scale = obj_scale + [obj[this_obj]['SCALE']]
+    
+    accu = accu*obj_scale[0]
+
+    # scale accuracy
+    eps = 1.0e-04
+
+    # optimizer summary
+    sys.stdout.write('SNOPT parameters:\n')
+    sys.stdout.write('Number of design variables: ' + str(n_dv) + '\n')
+    sys.stdout.write('Objective function scaling factor: ' + str(obj_scale) + '\n')
+    sys.stdout.write('Maximum number of iterations: ' + str(its) + '\n')
+    sys.stdout.write('Requested accuracy: ' + str(accu) + '\n')
+    sys.stdout.write('Initial guess for the independent variable(s): ' + str(x0) + '\n')
+    sys.stdout.write('Lower and upper bound for each independent variable: ' + str(xb) + '\n\n')
+
+    lb = [0.0]*n_dv
+    ub = [0.0]*n_dv
+    for i in range(n_dv):
+        lb[i] = xb[i][0]
+        ub[i] = xb[i][1]
+    
+    opt_prob = pyOpt.Optimization('SNOPT constrained optimization problem',obj_func, use_groups=True)
+    opt_prob.addVarGroup('x',n_dv,'c',lower=lb[0], upper=ub[0],value=x0[0] )
+    opt_prob.addObj('f')
+    print opt_prob
+    
+    snopt = pySNOPT.SNOPT()
+    
+    # Run Optimizer
+    [fstr, xstr, inform] = snopt(opt_prob,sens_type=grad_func,p1=project)
+
+    print opt_prob.solution(0)
+    
+    # Done
+    return fstr
+    
+
+
+# -------------------------------------------------------------------
+#  pyOpt SLSQP
+# -------------------------------------------------------------------
+def pyopt_slsqp(project,x0=None,xb=None,its=100,accu=1e-10,grads=True):
+    """ result = scipy_slsqp(project,x0=[],xb=[],its=100,accu=1e-10)
+    
+        Runs the Scipy implementation of SLSQP with 
+        an SU2 project
+        
+        Inputs:
+            project - an SU2 project
+            x0      - optional, initial guess
+            xb      - optional, design variable bounds
+            its     - max outer iterations, default 100
+            accu    - accuracy, default 1e-10
+        
+        Outputs:
+           result - the outputs from scipy.fmin_slsqp
+    """
+        # import scipy optimizer
+    import pyOpt
+    
+    # handle input cases
+    if x0 is None: x0 = []
+    if xb is None: xb = []
+    
+    # function handles
+    func           = obj_f
+    f_eqcons       = con_ceq
+    f_ieqcons      = con_cieq 
+    
+    # gradient handles
+    if project.config.get('GRADIENT_METHOD','NONE') == 'NONE': 
+        fprime         = None
+        fprime_eqcons  = None
+        fprime_ieqcons = None
+    else:
+        fprime         = obj_df
+        fprime_eqcons  = con_dceq
+        fprime_ieqcons = con_dcieq        
+    
+    # number of design variables
+    n_dv = len( project.config['DEFINITION_DV']['KIND'] )
+    project.n_dv = n_dv
+    
+    # Initial guess
+    if not x0: x0 = [0.0]*n_dv
+    
+    # prescale x0
+    dv_scales = project.config['DEFINITION_DV']['SCALE']
+    x0 = [ x0[i]/dv_scl for i,dv_scl in enumerate(dv_scales) ]    
+    
+    # scale accuracy
+    obj = project.config['OPT_OBJECTIVE']
+    obj_scale = []
+    for this_obj in obj.keys():
+        obj_scale = obj_scale + [obj[this_obj]['SCALE']]
+    
+    accu = accu*obj_scale[0]
+
+    # scale accuracy
+    eps = 1.0e-04
+
+    # optimizer summary
+    sys.stdout.write('SLSQP parameters:\n')
+    sys.stdout.write('Number of design variables: ' + str(n_dv) + '\n')
+    sys.stdout.write('Objective function scaling factor: ' + str(obj_scale) + '\n')
+    sys.stdout.write('Maximum number of iterations: ' + str(its) + '\n')
+    sys.stdout.write('Requested accuracy: ' + str(accu) + '\n')
+    sys.stdout.write('Initial guess for the independent variable(s): ' + str(x0) + '\n')
+    sys.stdout.write('Lower and upper bound for each independent variable: ' + str(xb) + '\n\n')
+
+    lb = [0.0]*n_dv
+    ub = [0.0]*n_dv
+    for i in range(n_dv):
+        lb[i] = xb[i][0]
+        ub[i] = xb[i][1]
+    
+    opt_prob = pyOpt.Optimization('pyOpt SLSQP',obj_func, use_groups=True)
+    opt_prob.addVarGroup('x',n_dv,'c',lower=lb[0], upper=ub[0],value=x0[0] )
+    opt_prob.addObj('f')
+    print opt_prob
+    
+    slsqp = pyOpt.SLSQP()
+    slsqp.setOption('IPRINT',2)
+    
+    # Run Optimizer
+    [fstr, xstr, inform] = slsqp(opt_prob,sens_type=grad_func,p1=project)
+
+    print opt_prob.solution(0)
+    
+    # Done
+    return fstr
+    
+    
+# -------------------------------------------------------------------
 #  Scipy SLSQP
 # -------------------------------------------------------------------
 
@@ -98,7 +310,7 @@ def scipy_slsqp(project,x0=None,xb=None,its=100,accu=1e-10,grads=True):
     obj = project.config['OPT_OBJECTIVE']
     obj_scale = []
     for this_obj in obj.keys():
-        obj_scale = obj_scale + [obj[obj.keys()[0]]['SCALE']]
+        obj_scale = obj_scale + [obj[this_obj]['SCALE']]
     
     accu = accu*obj_scale[0]
 
