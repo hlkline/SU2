@@ -140,8 +140,10 @@ def shape_optimization( filename                ,
     
     # Optimize
     if method=='PYOPTSLSQP':
+        print " NOTE: pyopt_slsqp requires installation of pyopt and its dependencies."
         SU2.opt.PYOPTSLSQP(project,x0,xb,its,accu)
     if method=='SNOPT':
+        print " NOTE: pyopt_snopt requires installation of pyopt, snopt, and their dependencies."
         SU2.opt.SNOPT(project,x0,xb,its,accu)
     else:
         SU2.opt.SLSQP(project,x0,xb,its,accu)
