@@ -7189,17 +7189,19 @@ void CAdjNSSolver::BC_Isothermal_Wall(CGeometry *geometry, CSolver **solver_cont
         kGTdotn = 0;
 //        Xi = solver_container[FLOW_SOL]->GetTotal_MaxHeatFlux();
 //        Xi = 1.0;
-        /*
+
         su2double Area = 0.0;
         for (iDim = 0; iDim < nDim; iDim++)
           Area+=Normal[iDim]*Normal[iDim];
+        Area = pow(Area, 0.5);
+        /*
         su2double beta = 1.0; // For pnorm = 1.0
         for (iDim = 0; iDim < nDim; iDim++)
           kGTdotn -= Thermal_Conductivity*GradT[iDim]*Normal[iDim]/Area;
           */
         //q = - Xi * pnorm * pow(kGTdotn, pnorm-1.0)*obj_weight;
         //q = - 1.0 * pnorm * beta*pow(kGTdotn, pnorm-1.0)*obj_weight;
-        q = 1.0*obj_weight;
+        q = 1.0*Area*obj_weight;
       }
       
       /*--- Strong BC enforcement of the energy equation ---*/
