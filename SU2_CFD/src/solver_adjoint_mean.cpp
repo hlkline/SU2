@@ -4678,6 +4678,8 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
 
       Point_Normal = geometry->vertex[val_marker][iVertex]->GetNormal_Neighbor();
 
+      conv_numerics->SetCoord(geometry->node[iPoint]->GetCoord(), geometry->node[Point_Normal]->GetCoord());
+
       /*--- Allocate the value at the outlet ---*/
 
       V_outlet = solver_container[FLOW_SOL]->GetCharacPrimVar(val_marker, iVertex);
@@ -4725,7 +4727,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           Psi_outlet[iVar] = 0.0;
         }
 
-        if (Vn >= SoundSpeed) {
+        if (Vn > SoundSpeed) {
           /*--- Objective-dependent additions to energy term ---*/
           Vn_Exit = Vn; /* Vn_Exit comes from Reiman conditions in subsonic case*/
           Vn_rel = Vn_Exit-ProjGridVel;
@@ -4805,10 +4807,12 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           }
            */
           /*Constant-pressure version*/
-          a1 = SoundSpeed*SoundSpeed/Gamma_Minus_One/Vn;
-          Psi_outlet[0] += Psi_outlet[nVar-1]*(Velocity2*0.5+Vn_rel*a1);
-          for (iDim = 0; iDim < nDim; iDim++) {
-            Psi_outlet[iDim+1] += -Psi_outlet[nVar-1]*(a1*UnitNormal[iDim] + Velocity[iDim]);
+          if (Vn!=0.0){
+            a1 = SoundSpeed*SoundSpeed/Gamma_Minus_One/Vn;
+            Psi_outlet[0] += Psi_outlet[nVar-1]*(Velocity2*0.5+Vn_rel*a1);
+            for (iDim = 0; iDim < nDim; iDim++) {
+              Psi_outlet[iDim+1] += -Psi_outlet[nVar-1]*(a1*UnitNormal[iDim] + Velocity[iDim]);
+            }
           }
         }
 
@@ -5386,8 +5390,11 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
 #endif
   
   /*--- Norm heat flux objective test ---*/
-  
   pnorm = 1.0;
+  if (config->GetKind_ObjFunc()==TOTAL_HEATFLUX)
+    pnorm = 1.0;
+  if (config->GetKind_ObjFunc()==MAXIMUM_HEATFLUX)
+    pnorm = 10.0;
   
   /*--- Set the gamma value ---*/
   
@@ -5526,7 +5533,7 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
   if ((config->GetKind_ObjFunc() == TOTAL_HEATFLUX) ||
       (config->GetKind_ObjFunc() == MAXIMUM_HEATFLUX) ||
       (config->GetKind_ObjFunc() == INVERSE_DESIGN_HEATFLUX))
-    PsiE_Inf = -1.0;
+    PsiE_Inf = 1.0;
   else
     PsiE_Inf = 0.0;
   Phi_Inf = new su2double [nDim];
@@ -7106,6 +7113,8 @@ void CAdjNSSolver::BC_Isothermal_Wall(CGeometry *geometry, CSolver **solver_cont
   string Monitoring_Tag;
   unsigned short jMarker, iMarker_Monitoring=0;
   su2double obj_weight = 1.0;
+  su2double beta = 1.0, Area = 0.0;
+
   
   /*--- Identify marker monitoring index ---*/
   for (jMarker = 0; jMarker < config->GetnMarker_Monitoring(); jMarker++){
@@ -7190,18 +7199,17 @@ void CAdjNSSolver::BC_Isothermal_Wall(CGeometry *geometry, CSolver **solver_cont
 //        Xi = solver_container[FLOW_SOL]->GetTotal_MaxHeatFlux();
 //        Xi = 1.0;
 
-        su2double Area = 0.0;
+        Area = 0.0;
         for (iDim = 0; iDim < nDim; iDim++)
           Area+=Normal[iDim]*Normal[iDim];
         Area = pow(Area, 0.5);
-        /*
-        su2double beta = 1.0; // For pnorm = 1.0
+
+        beta = 1.0; // For pnorm = 1.0
         for (iDim = 0; iDim < nDim; iDim++)
           kGTdotn -= Thermal_Conductivity*GradT[iDim]*Normal[iDim]/Area;
-          */
         //q = - Xi * pnorm * pow(kGTdotn, pnorm-1.0)*obj_weight;
-        //q = - 1.0 * pnorm * beta*pow(kGTdotn, pnorm-1.0)*obj_weight;
-        q = 1.0*Area*obj_weight;
+        q = 1.0 * pnorm * beta*pow(kGTdotn, pnorm-1.0)*Area*obj_weight;
+        //q = 1.0*Area*obj_weight;
       }
       
       /*--- Strong BC enforcement of the energy equation ---*/
