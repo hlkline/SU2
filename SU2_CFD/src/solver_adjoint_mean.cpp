@@ -4750,7 +4750,8 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
             for (iDim = 0; iDim < nDim; iDim++) {
               Velocity2 += Velocity[iDim]*Velocity[iDim];
             }
-            Psi_outlet[nDim+1]+=obj_weight*(a1*Velocity2/(2.0*Vn_Exit));
+            if (Vn_Exit!=0.0)
+              Psi_outlet[nDim+1]+=obj_weight*(a1*Velocity2/(2.0*Vn_Exit));
             break;
           case AVG_OUTLET_PRESSURE:
             /*Area averaged static pressure*/
