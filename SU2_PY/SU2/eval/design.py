@@ -14,7 +14,7 @@
 #                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
 #                 Prof. Rafael Palacios' group at Imperial College London.
 #
-# Copyright (C) 2012-2015 SU2, the open-source CFD code.
+# Copyright (C) 2012-2016 SU2, the open-source CFD code.
 #
 # SU2 is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -228,18 +228,14 @@ def obj_f(dvs,config,state=None):
 #    if objectives: print('Evaluate Objectives')
     # evaluate each objective
     vals_out = []
-    func=0.0
+    func = 0.0
     for i_obj,this_obj in enumerate(objectives):
         scale = def_objs[this_obj]['SCALE']
         sign  = su2io.get_objectiveSign(this_obj)
         
         # Evaluate Objective Function
-#        sys.stdout.write('  %s... ' % this_obj.title())
-        func += su2func(this_obj,config,state)*sign*scale
-#        sys.stdout.write('done: %.6f\n' % func)
-        
         # scaling and sign
-        #func = func * sign * scale
+        func += su2func(this_obj,config,state) * sign * scale
         
     vals_out.append(func)
     #: for each objective
@@ -272,6 +268,7 @@ def obj_df(dvs,config,state=None):
     multi_objective = (config['COMBINE_OBJECTIVE']=="YES")
      
     dv_scales = config['DEFINITION_DV']['SCALE']
+    dv_size   = config['DEFINITION_DV']['SIZE']
     
     #  if objectives: print('Evaluate Objective Gradients')
     # evaluate each objective
@@ -285,23 +282,35 @@ def obj_df(dvs,config,state=None):
         config['OBJECTIVE_WEIGHT']=','.join(map(str,scale))
         
         grad= su2grad(objectives,grad_method,config,state)
+        # scaling : obj scale  adn sign are accounted for in combo gradient, dv scale now applied
+        k = 0
+        for i_dv,dv_scl in enumerate(dv_scales):
+            for i_grd in range(dv_size[i_dv]):
+                grad[k] = grad[k] / dv_scl
+                k = k + 1
+
         vals_out.append(grad)
     else:
-        marker_monitored = config['MARKER_MONITORING']
         for i_obj,this_obj in enumerate(objectives):
+            marker_monitored = config['MARKER_MONITORING']
             scale = def_objs[this_obj]['SCALE']
             sign  = su2io.get_objectiveSign(this_obj)
+            # Correct marker monitoring for case where multiple objectives are evaluated separately
             if n_obj>1:
                 config['MARKER_MONITORING'] = marker_monitored[i_obj]
 
+            
             # Evaluate Objective Gradient
     #        sys.stdout.write('  %s... ' % this_obj.title())
             grad = su2grad(this_obj,grad_method,config,state)
     #        sys.stdout.write('done\n')
             
             # scaling and sign
-            for i_grd,dv_scl in enumerate(dv_scales):
-                grad[i_grd] = grad[i_grd] * sign * scale / dv_scl
+            k = 0
+            for i_dv,dv_scl in enumerate(dv_scales):
+                for i_grd in range(dv_size[i_dv]):
+                    grad[k] = grad[k] * sign * scale / dv_scl
+                    k = k + 1
             
             vals_out.append(grad)
     
@@ -379,7 +388,8 @@ def con_dceq(dvs,config,state=None):
     constraints = def_cons.keys()
     
     dv_scales = config['DEFINITION_DV']['SCALE']
-    
+    dv_size   = config['DEFINITION_DV']['SIZE']
+
 #    if constraints: sys.stdout.write('Evaluate Equality Constraint Gradients ...')
     
     # evaluate each constraint
@@ -394,9 +404,12 @@ def con_dceq(dvs,config,state=None):
 #        sys.stdout.write('done\n')
         
         # scaling
-        for i_grd,dv_scl in enumerate(dv_scales):
-            grad[i_grd] = grad[i_grd] * scale / dv_scl     
-        
+        k = 0
+        for i_dv,dv_scl in enumerate(dv_scales):
+            for i_grd in range(dv_size[i_dv]):
+                grad[k] = grad[k] * scale / dv_scl
+                k = k + 1
+
         vals_out.append(grad)
         
     #: for each constraint
@@ -477,7 +490,8 @@ def con_dcieq(dvs,config,state=None):
     constraints = def_cons.keys()
     
     dv_scales = config['DEFINITION_DV']['SCALE']
-    
+    dv_size   = config['DEFINITION_DV']['SIZE']
+
 #    if constraints: sys.stdout.write('Evaluate Inequality Constraint Gradients')
     
     # evaluate each constraint
@@ -494,8 +508,11 @@ def con_dcieq(dvs,config,state=None):
 #        sys.stdout.write('done\n')
         
         # scaling and sign
-        for i_grd,dv_scl in enumerate(dv_scales):
-            grad[i_grd] = grad[i_grd] * sign * scale / dv_scl          
+        k = 0
+        for i_dv,dv_scl in enumerate(dv_scales):
+            for i_grd in range(dv_size[i_dv]):
+                grad[k] = grad[k] * sign * scale / dv_scl
+                k = k + 1
 
         vals_out.append(grad)
         
