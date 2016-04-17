@@ -409,7 +409,6 @@ def get_objectiveSign( ObjFun_name ):
             THRUST
             FIGURE_OF_MERIT
             MASS_FLOW_RATE
-            AVG_OUTLET_PRESSURE
             AVG_TOTAL_PRESSURE
         returns +1 otherwise
     """
@@ -421,7 +420,6 @@ def get_objectiveSign( ObjFun_name ):
     if ObjFun_name == "FIGURE_OF_MERIT" : return -1.0
     if ObjFun_name == "MASS_FLOW_RATE" : return -1.0
     if ObjFun_name == "AVG_TOTAL_PRESSURE" : return -1.0
-    if ObjFun_name == "AVG_OUTLET_PRESSURE" : return -1.0
     
     # otherwise
     return 1.0

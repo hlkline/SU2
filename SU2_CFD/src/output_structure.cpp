@@ -4209,7 +4209,7 @@ void COutput::SetConvHistory_Header(ofstream *ConvHist_file, CConfig *config) {
   
   unsigned short direct_diff = config->GetDirectDiff();
 
-  bool isothermal = false;
+  bool isothermal = true;
   for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++)
     if ((config->GetMarker_All_KindBC(iMarker) == ISOTHERMAL             ))
       isothermal = true;
@@ -4458,7 +4458,7 @@ void COutput::SetConvHistory_Body(ofstream *ConvHist_file,
     bool equiv_area = config[val_iZone]->GetEquivArea();
     bool inv_design = (config[val_iZone]->GetInvDesign_Cp() || config[val_iZone]->GetInvDesign_HeatFlux());
     bool transition = (config[val_iZone]->GetKind_Trans_Model() == LM);
-    bool isothermal = false;
+    bool isothermal = true;
     for (iMarker = 0; iMarker < config[val_iZone]->GetnMarker_All(); iMarker++)
       if ((config[val_iZone]->GetMarker_All_KindBC(iMarker) == ISOTHERMAL))
         isothermal = true;
