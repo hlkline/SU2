@@ -148,7 +148,7 @@ def pyopt_snopt(project,x0=None,xb=None,its=100,accu=1e-10,grads=True):
     snopt = pySNOPT.SNOPT()
     
     # Run Optimizer
-    [fstr, xstr, inform] = snopt(opt_prob,sens_type=grad_func,p1=project)
+    [fstr, xstr, inform] = snopt(opt_prob,sens_type=grad_func,p1=project,options={'Major step limit':obj_scale,'Major optimality tolerance':accu})
 
     print opt_prob.solution(0)
     
