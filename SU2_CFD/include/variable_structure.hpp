@@ -4,7 +4,7 @@
  *        each kind of governing equation (direct, adjoint and linearized).
  *        The subroutines and functions are in the <i>variable_structure.cpp</i> file.
  * \author F. Palacios, T. Economon
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -49,7 +49,7 @@ using namespace std;
  * \class CVariable
  * \brief Main class for defining the variables.
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CVariable {
 protected:
@@ -1397,16 +1397,6 @@ public:
 	 * \brief A virtual member.
 	 */
 	virtual void SetVelocity(void);
-  
-	/*!
-	 * \brief A virtual member.
-	 */
-  virtual void SetStress(unsigned short iVar, unsigned short jVar, su2double val_stress);
-  
-	/*!
-	 * \brief A virtual member.
-	 */
-  virtual void AddStress(unsigned short iVar, unsigned short jVar, su2double val_stress);
 
 	/*!
 	 * \brief A virtual member.
@@ -1426,12 +1416,6 @@ public:
 
 	/*!
 	 * \brief A virtual member.
-   
-	 */
-  virtual su2double **GetStress(void);
-  
-	/*!
-	 * \brief A virtual member.
 	 */
   virtual void SetVonMises_Stress(su2double val_stress);
   
@@ -1440,33 +1424,6 @@ public:
    
 	 */
   virtual su2double GetVonMises_Stress(void);
-  
-  /*!
-	 * \brief A virtual member.
-	 */
-  virtual void SetFlow_Pressure(su2double val_pressure);
-  
-	/*!
-	 * \brief A virtual member.
-   
-	 */
-  virtual su2double GetFlow_Pressure(void);
-
-    /*!
-	 * \brief A virtual member.
-	 */
-  virtual void Initialize_Connectivity(void);
-
-  /*!
-	 * \brief A virtual member.
-	 */
-  virtual void Upgrade_Connectivity(void);
-
-  /*!
-	 * \brief A virtual member.
-	 */
-  virtual unsigned short Get_Connectivity(void);
-
 
 	/*!
 	 * \brief A virtual member.
@@ -1513,6 +1470,26 @@ public:
 	 * \brief A virtual member.
 	 */
 	virtual su2double Get_SurfaceLoad_Res_n(unsigned short iVar);
+
+	/*!
+	 * \brief A virtual member.
+	 */
+	virtual void Add_BodyForces_Res(su2double *val_bodyForce);
+
+	/*!
+	 * \brief A virtual member.
+	 */
+	virtual su2double *Get_BodyForces_Res(void);
+
+	/*!
+	 * \brief A virtual member.
+	 */
+	virtual su2double Get_BodyForces_Res(unsigned short iVar);
+
+	/*!
+	 * \brief A virtual member.
+	 */
+	virtual void Clear_BodyForces_Res(void);
 
 	/*!
 	 * \brief A virtual member.
@@ -2130,7 +2107,7 @@ public:
  * \class CBaselineVariable
  * \brief Main class for defining the variables of a baseline solution from a restart file (for output).
  * \author F. Palacios, T. Economon.
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CBaselineVariable : public CVariable {
 public:
@@ -2160,7 +2137,7 @@ public:
  * \brief Main class for defining the variables of the potential solver.
  * \ingroup Potential_Flow_Equation
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CPotentialVariable : public CVariable {
 	su2double *Charge_Density;
@@ -2204,7 +2181,7 @@ public:
  * \brief Main class for defining the variables of the wave equation solver.
  * \ingroup Potential_Flow_Equation
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CWaveVariable : public CVariable {
 protected:
@@ -2250,7 +2227,7 @@ public:
  * \brief Main class for defining the variables of the Heat equation solver.
  * \ingroup Potential_Flow_Equation
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CHeatVariable : public CVariable {
 protected:
@@ -2288,308 +2265,6 @@ public:
 	 * \return Pointer to the direct solution vector.
 	 */
 	su2double *GetSolution_Direct(void);
-
-};
-
-/*! 
- * \class CFEAVariable
- * \brief Main class for defining the variables of the FEA equation solver.
- * \ingroup Structural Finite Element Analysis Variables
- * \author F. Palacios, R. Sanchez.
- * \version 4.1.0 "Cardinal"
- */
-class CFEAVariable : public CVariable {
-protected:
-  su2double Flow_Pressure;					/*!< \brief Pressure of the fluid. */
-
-  bool dynamicFEA;			/*!< \brief Non-physical points in the solution (force first order). */
-
-  su2double **Stress;  					/*!< \brief Stress tensor. */
-  su2double VonMises_Stress; 				/*!< \brief Von Mises stress. */
-  unsigned short nAttachedElements; 	/*!< \brief Number of elements connected to the node. */
-
-  su2double *Solution_Vel,					/*!< \brief Velocity of the nodes. */
-  *Solution_Vel_time_n;					/*!< \brief Velocity of the nodes at time n. */
-
-  su2double *Solution_Accel,				/*!< \brief Acceleration of the nodes. */
-  *Solution_Accel_time_n;				/*!< \brief Acceleration of the nodes at time n. */
-
-  su2double *Solution_Pred;				/*!< \brief Predictor of the solution (for FSI applications) */
-  su2double *Solution_Pred_Old;		/*!< \brief Predictor of the solution (for FSI applications) in the iter k-1 */
-
-public:
-
-	/*!
-	 * \brief Constructor of the class. 
-	 */
-	CFEAVariable(void);
-
-	/*!
-	 * \overload
-	 * \param[in] val_fea - Values of the fea solution (initialization value).		 
-	 * \param[in] val_nDim - Number of dimensions of the problem.		 
-	 * \param[in] val_nvar - Number of variables of the problem.
-	 * \param[in] config - Definition of the particular problem.	 
-	 */	
-	CFEAVariable(su2double *val_fea, unsigned short val_nDim, unsigned short val_nvar, CConfig *config);
-
-	/*!
-	 * \brief Destructor of the class. 
-	 */	
-	~CFEAVariable(void);
-  
-  /*!
-	 * \brief Set the value of the stress.
-   * \param[in] iVar - i index.
-	 * \param[in] jVar - j index.
-	 * \param[in] val_stress - Value of the stress.
-	 */
-  void SetStress(unsigned short iVar, unsigned short jVar, su2double val_stress);
-  
-  /*!
-	 * \brief Add a value to the stress matrix in the element.
-   * \param[in] iVar - i index.
-	 * \param[in] jVar - j index.
-	 * \param[in] val_stress - Value of the stress.
-	 */
-  void AddStress(unsigned short iVar, unsigned short jVar, su2double val_stress);
-
-  /*!
-	 * \brief Get the value of the stress.
-   * \return Value of the stress.
-	 */
-  su2double **GetStress(void);
-
-  /*!
-	 * \brief Set the value of the Von Mises stress.
-	 * \param[in] val_stress - Value of the Von Mises stress.
-	 */
-  void SetVonMises_Stress(su2double val_stress);
-  
-  /*!
-	 * \brief Get the value of the Von Mises stress.
-   * \return Value of the Von Mises stress.
-	 */
-  su2double GetVonMises_Stress(void);
-  
-  /*!
-	 * \brief Set the value of the Von Mises stress.
-	 * \param[in] val_stress - Value of the Von Mises stress.
-	 */
-  void SetFlow_Pressure(su2double val_pressure);
-  
-  /*!
-	 * \brief Get the value of the Von Mises stress.
-   * \return Value of the Von Mises stress.
-	 */
-  su2double GetFlow_Pressure(void);
-
-  /*!
-	 * \brief Initialize the value of the number of attached elements to a node.
-   * \return Value of the Von Mises stress.
-	 */
-  void Initialize_Connectivity(void);
-
-
-  /*!
-	 * \brief Add a 1 to the value of the number of attached elements to a node.
-   * \return Value of the Von Mises stress.
-	 */
-  void Upgrade_Connectivity(void);
-
-
-  /*!
-	 * \brief Returns the value of the number of attached elements to a node.
-   * \return Value of the Von Mises stress.
-	 */
-  unsigned short Get_Connectivity(void);
-
-	/*!
-	 * \brief Set the value of the old solution.
-	 * \param[in] val_solution_old - Pointer to the residual vector.
-	 */
-	void SetSolution_time_n(void);
-
-	/*!
-	 * \brief Set the value of the old solution.
-	 * \param[in] val_solution_old - Pointer to the residual vector.
-	 */
-	void SetSolution_time_n(su2double *val_solution_time_n);
-
-
-	/*!
-	 * \brief Set the value of the velocity (Structural Analysis).
-	 * \param[in] val_solution - Solution of the problem (velocity).
-	 */
-	void SetSolution_Vel(su2double *val_solution_vel);
-
-	/*!
-	 * \overload
-	 * \param[in] val_var - Index of the variable.
-	 * \param[in] val_solution - Value of the solution for the index <i>val_var</i>.
-	 */
-	void SetSolution_Vel(unsigned short val_var, su2double val_solution_vel);
-
-	/*!
-	 * \brief Set the value of the velocity (Structural Analysis) at time n.
-	 * \param[in] val_solution - Solution of the problem (acceleration).
-	 */
-	void SetSolution_Vel_time_n(void);
-
-	/*!
-	 * \brief Set the value of the velocity (Structural Analysis) at time n.
-	 * \param[in] val_solution_old - Pointer to the residual vector.
-	 */
-	void SetSolution_Vel_time_n(su2double *val_solution_vel_time_n);
-
-	/*!
-	 * \overload
-	 * \param[in] val_var - Index of the variable.
-	 * \param[in] val_solution_old - Value of the old solution for the index <i>val_var</i>.
-	 */
-	void SetSolution_Vel_time_n(unsigned short val_var, su2double val_solution_vel_time_n);
-
-	/*!
-	 * \brief Get the solution at time n.
-	 * \param[in] val_var - Index of the variable.
-	 * \return Value of the solution for the index <i>val_var</i>.
-	 */
-	su2double GetSolution_time_n(unsigned short val_var);
-
-	/*!
-	 * \brief Get the velocity (Structural Analysis).
-	 * \param[in] val_var - Index of the variable.
-	 * \return Value of the solution for the index <i>val_var</i>.
-	 */
-	su2double GetSolution_Vel(unsigned short val_var);
-
-	/*!
-	 * \brief Get the solution of the problem.
-	 * \return Pointer to the solution vector.
-	 */
-	su2double *GetSolution_Vel(void);
-
-	/*!
-	 * \brief Get the velocity of the nodes (Structural Analysis) at time n.
-	 * \param[in] val_var - Index of the variable.
-	 * \return Pointer to the old solution vector.
-	 */
-	su2double GetSolution_Vel_time_n(unsigned short val_var);
-
-	/*!
-	 * \brief Get the solution at time n.
-	 * \return Pointer to the solution (at time n) vector.
-	 */
-	su2double *GetSolution_Vel_time_n(void);
-
-	/*!
-	 * \brief Set the value of the acceleration (Structural Analysis).
-	 * \param[in] val_solution - Solution of the problem (acceleration).
-	 */
-	void SetSolution_Accel(su2double *val_solution_accel);
-
-	/*!
-	 * \overload
-	 * \param[in] val_var - Index of the variable.
-	 * \param[in] val_solution - Value of the solution for the index <i>val_var</i>.
-	 */
-	void SetSolution_Accel(unsigned short val_var, su2double val_solution_accel);
-
-	/*!
-	 * \brief Set the value of the acceleration (Structural Analysis) at time n.
-	 * \param[in] val_solution_old - Pointer to the residual vector.
-	 */
-	void SetSolution_Accel_time_n(su2double *val_solution_accel_time_n);
-
-	/*!
-	 * \brief Set the value of the acceleration (Structural Analysis) at time n.
-	 * \param[in] val_solution - Solution of the problem (acceleration).
-	 */
-	void SetSolution_Accel_time_n(void);
-
-	/*!
-	 * \overload
-	 * \param[in] val_var - Index of the variable.
-	 * \param[in] val_solution_old - Value of the old solution for the index <i>val_var</i>.
-	 */
-	void SetSolution_Accel_time_n(unsigned short val_var, su2double val_solution_accel_time_n);
-
-	/*!
-	 * \brief Get the acceleration (Structural Analysis).
-	 * \param[in] val_var - Index of the variable.
-	 * \return Value of the solution for the index <i>val_var</i>.
-	 */
-	su2double GetSolution_Accel(unsigned short val_var);
-
-	/*!
-	 * \brief Get the solution of the problem.
-	 * \return Pointer to the solution vector.
-	 */
-	su2double *GetSolution_Accel(void);
-
-	/*!
-	 * \brief Get the acceleration of the nodes (Structural Analysis) at time n.
-	 * \param[in] val_var - Index of the variable.
-	 * \return Pointer to the old solution vector.
-	 */
-	su2double GetSolution_Accel_time_n(unsigned short val_var);
-
-	/*!
-	 * \brief Get the solution at time n.
-	 * \return Pointer to the solution (at time n) vector.
-	 */
-	su2double *GetSolution_Accel_time_n(void);
-
-
-	/*!
-	 * \brief Set the value of the solution predictor.
-	 */
-	void SetSolution_Pred(void);
-
-	/*!
-	 * \brief Set the value of the old solution.
-	 * \param[in] val_solution_pred - Pointer to the residual vector.
-	 */
-	void SetSolution_Pred(su2double *val_solution_pred);
-
-	/*!
-	 * \brief Get the value of the solution predictor.
-	 * \param[in] val_var - Index of the variable.
-	 * \return Pointer to the old solution vector.
-	 */
-	su2double GetSolution_Pred(unsigned short val_var);
-
-	/*!
-	 * \brief Get the solution at time n.
-	 * \return Pointer to the solution (at time n) vector.
-	 */
-	su2double *GetSolution_Pred(void);
-
-	/*!
-	 * \brief Set the value of the solution predictor.
-	 */
-	void SetSolution_Pred_Old(void);
-
-	/*!
-	 * \brief Set the value of the old solution.
-	 * \param[in] val_solution_pred_Old - Pointer to the residual vector.
-	 */
-	void SetSolution_Pred_Old(su2double *val_solution_pred_Old);
-
-	/*!
-	 * \brief Get the value of the solution predictor.
-	 * \param[in] val_var - Index of the variable.
-	 * \return Pointer to the old solution vector.
-	 */
-	su2double GetSolution_Pred_Old(unsigned short val_var);
-
-	/*!
-	 * \brief Get the solution at time n.
-	 * \return Pointer to the solution (at time n) vector.
-	 */
-	su2double *GetSolution_Pred_Old(void);
-
-
 
 };
 
@@ -2700,6 +2375,26 @@ public:
 	 * \brief Get the surface load from the previous time step.
 	 */
 	su2double Get_SurfaceLoad_Res_n(unsigned short iVar);
+
+	/*!
+	 * \brief Add body forces to the residual term.
+	 */
+	void Add_BodyForces_Res(su2double *val_bodyForce);
+
+	/*!
+	 * \brief Clear the surface load residual
+	 */
+	void Clear_BodyForces_Res(void);
+
+	/*!
+	 * \brief Get the body forces.
+	 */
+	su2double *Get_BodyForces_Res(void);
+
+	/*!
+	 * \brief Get the body forces.
+	 */
+	su2double Get_BodyForces_Res(unsigned short iVar);
 
 	/*!
 	 * \brief Set the flow traction at a node on the structural side
@@ -3016,7 +2711,7 @@ public:
  * \brief Main class for defining the variables of the Euler's solver.
  * \ingroup Euler_Equations
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CEulerVariable : public CVariable {
 protected:
@@ -3500,7 +3195,7 @@ public:
  * \brief Main class for defining the variables of the Navier-Stokes' solver.
  * \ingroup Navier_Stokes_Equations
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CNSVariable : public CEulerVariable {
 private:
@@ -3701,7 +3396,7 @@ public:
  * \brief Main class for defining the variables of the turbulence model.
  * \ingroup Turbulence_Model
  * \author A. Bueno.
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CTurbVariable : public CVariable {
 protected:
@@ -3745,7 +3440,7 @@ public:
  * \brief Main class for defining the variables of the turbulence model.
  * \ingroup Turbulence_Model
  * \author A. Bueno.
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 
 class CTurbSAVariable : public CTurbVariable {
@@ -3792,7 +3487,7 @@ public:
  * \brief Main class for defining the variables of the turbulence model.
  * \ingroup Turbulence_Model
  * \author A. Bueno.
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 
 class CTurbMLVariable : public CTurbVariable {
@@ -3838,7 +3533,7 @@ public:
  * \brief Main class for defining the variables of the turbulence model.
  * \ingroup Turbulence_Model
  * \author A. Bueno.
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 
 class CTransLMVariable : public CTurbVariable {
@@ -3891,7 +3586,7 @@ public:
  * \brief Main class for defining the variables of the turbulence model.
  * \ingroup Turbulence_Model
  * \author A. Bueno.
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 
 class CTurbSSTVariable : public CTurbVariable {
@@ -3956,7 +3651,7 @@ public:
  * \brief Main class for defining the variables of the adjoint Euler solver.
  * \ingroup Euler_Equations
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CAdjEulerVariable : public CVariable {
 protected:
@@ -4093,7 +3788,7 @@ public:
  * \brief Main class for defining the variables of the adjoint Navier-Stokes solver.
  * \ingroup Navier_Stokes_Equations
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CAdjNSVariable : public CAdjEulerVariable {	
 private:
@@ -4178,7 +3873,7 @@ public:
  * \brief Main class for defining the variables of the adjoint turbulence model.
  * \ingroup Turbulence_Model
  * \author A. Bueno.
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CAdjTurbVariable : public CVariable {
 protected:
@@ -4228,7 +3923,7 @@ public:
  * \brief Main class for defining the variables of the Level Set.
  * \ingroup LevelSet_Model
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CAdjLevelSetVariable : public CVariable {
 public:
@@ -4266,7 +3961,7 @@ public:
  * \brief Main class for defining the variables of the potential solver.
  * \ingroup Potential_Flow_Equation
  * \author F. Palacios
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CTemplateVariable : public CVariable {
 public:
@@ -4296,7 +3991,7 @@ public:
  * \brief Main class for defining the variables of the adjoint solver.
  * \ingroup Discrete_Adjoint
  * \author T. Albring.
- * \version 4.1.0 "Cardinal"
+ * \version 4.1.1 "Cardinal"
  */
 class CDiscAdjVariable : public CVariable {
 private:
