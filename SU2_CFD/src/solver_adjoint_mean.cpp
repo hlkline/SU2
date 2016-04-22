@@ -7126,7 +7126,7 @@ void CAdjNSSolver::BC_Isothermal_Wall(CGeometry *geometry, CSolver **solver_cont
   string Monitoring_Tag;
   unsigned short jMarker, iMarker_Monitoring=0;
   su2double obj_weight = 1.0;
-  su2double beta = 1.0, Area = 0.0;
+  su2double beta = 1.0;
 
   
   /*--- Identify marker monitoring index ---*/
