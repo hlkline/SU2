@@ -65,7 +65,7 @@ def grad_func(x,f,g, *args, **kwargs):
 # -------------------------------------------------------------------
 #  pyOpt SLSQP
 # -------------------------------------------------------------------
-def pyopt_snopt(project,x0=None,xb=None,its=100,accu=1e-10,maxstep=1e-3,grads=True):
+def pyopt_snopt(project,x0=None,xb=None,its=100,accu=1e-10,maxstep=1e-3,partialprice=1, grads=True):
     """ result = scipy_slsqp(project,x0=[],xb=[],its=100,accu=1e-10)
     
         Runs the Scipy implementation of SLSQP with 
@@ -145,10 +145,10 @@ def pyopt_snopt(project,x0=None,xb=None,its=100,accu=1e-10,maxstep=1e-3,grads=Tr
     opt_prob.addObj('f')
     print opt_prob
 
-    snopt = pySNOPT.SNOPT()
+    snopt = pySNOPT.SNOPT(options = {'Partial price': partialprice,'Elastic mode':'Yes','Linesearch tolerance':0.99,'Major step limit':maxstep,'Major optimality tolerance':accu, 'Elastic weight':1.0e-6, 'Verify level':-1, 'Nonderivative linesearch'})
 
     # Run Optimizer
-    [fstr, xstr, inform] = snopt(opt_prob,sens_type=grad_func,p1=project, options={'Elastic mode':'Yes','Linesearch tolerance':0.99,'Major step limit':maxstep,'Major optimality tolerance':accu, 'Elastic weight':1.0e-6, 'Verify level':-1})
+    [fstr, xstr, inform] = snopt(opt_prob,sens_type=grad_func,p1=project)
 
     print opt_prob.solution(0)
 
