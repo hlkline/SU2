@@ -2359,16 +2359,36 @@ public:
   
   /*!
    * \brief A virtual member.
-   * \return average temperature evaluated at an exit boundary marker
+   * \return average mass flow rate evaluated at an exit boundary marker
    */
   virtual su2double GetOneD_MassFlowRate(void);
   
   /*!
    * \brief A virtual member.
-   * set average temperature evaluated at an exit boundary marker
+   * set average mass flow rate evaluated at an exit boundary marker
    */
   virtual void SetOneD_MassFlowRate(su2double MassFlowRate);
   
+  /*!
+   * \brief Provide the area averaged velocity at a marker.
+   */
+  virtual su2double GetOneD_Velocity(void);
+
+  /*!
+   * \brief Set the area averaged velocity at a marker.
+   */
+  virtual void SetOneD_Velocity(su2double Velocity);
+
+  /*!
+   * \brief Provide the area averaged Density number at a marker.
+   */
+  virtual su2double GetOneD_Density(void);
+
+  /*!
+   * \brief Set the area averaged Density at a marker.
+   */
+  virtual void SetOneD_Density(su2double Density);
+
   /*!
    * \brief A virtual member.
    * \ Get the flux averaged pressure at a marker.(same as area averaged pressure)
@@ -2995,6 +3015,8 @@ protected:
   OneD_Temp, /*!< \brief area average Temperature evaluated at an exit */
   OneD_PressureRef, /*!< \brief area average Pressure evaluated at an exit */
   OneD_MassFlowRate, /*!< \brief Mass flow rate at an exit */
+  OneD_Density, /*!< \brief Area averaged density at an exit */
+  OneD_Velocity, /*!< \brief Area averaged velocity at an exit */
   OneD_DensityRef, /*!< \brief flux average density evaluated at an exit */
   OneD_EnthalpyRef, /*!< \brief flux average enthalpy evaluated at an exit */
   OneD_VelocityRef, /*!< \brief flux average velocity evaluated at an exit */
@@ -4528,7 +4550,7 @@ public:
   void SetOneD_Mach(su2double AverageMach);
   
   /*!
-   * \brief Provide the averaged Mach number at a marker.
+   * \brief Provide the averaged Temperature number at a marker.
    */
   su2double GetOneD_Temp(void);
   
@@ -4538,15 +4560,35 @@ public:
   void SetOneD_Temp(su2double AverageTemperature);
   
   /*!
-   * \brief Provide the averaged Mach number at a marker.
+   * \brief Provide the averaged mass flow rate at a marker.
    */
   su2double GetOneD_MassFlowRate(void);
   
   /*!
-   * \brief Set the averaged Temperature at a marker.
+   * \brief Set the averaged mass flow rate at a marker.
    */
   void SetOneD_MassFlowRate(su2double MassFlowRate);
   
+  /*!
+   * \brief Provide the area averaged velocity at a marker.
+   */
+  su2double GetOneD_Velocity(void);
+
+  /*!
+   * \brief Set the area averaged velocity at a marker.
+   */
+  void SetOneD_Velocity(su2double Velocity);
+
+  /*!
+   * \brief Provide the area averaged Density number at a marker.
+   */
+  su2double GetOneD_Density(void);
+
+  /*!
+   * \brief Set the area averaged Density at a marker.
+   */
+  void SetOneD_Density(su2double Density);
+
   /*!
    * \brief Get the flux averaged pressure at a marker.(same as area averaged pressure)
    */

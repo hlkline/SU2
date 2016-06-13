@@ -408,6 +408,14 @@ inline su2double CSolver::GetOneD_MassFlowRate(void) {return 0;}
 
 inline void CSolver::SetOneD_MassFlowRate(su2double MassFlowRate) { }
 
+inline su2double CSolver::GetOneD_Velocity(void) {return 0;}
+
+inline void CSolver::SetOneD_Velocity(su2double VelocityAvg) { }
+
+inline su2double CSolver::GetOneD_Density(void) {return 0;}
+
+inline void CSolver::SetOneD_Density(su2double DensityAvg) { }
+
 inline su2double CSolver::GetOneD_FluxAvgPress(void) {return 0;}
 
 inline void CSolver::SetOneD_FluxAvgPress(su2double PressureRef) { }
@@ -935,6 +943,14 @@ inline void CEulerSolver::SetOneD_Temp(su2double AverageTemperature) { OneD_Temp
 inline su2double CEulerSolver::GetOneD_MassFlowRate(void) {return OneD_MassFlowRate;}
 
 inline void CEulerSolver::SetOneD_MassFlowRate(su2double MassFlowRate) { OneD_MassFlowRate = MassFlowRate; }
+
+inline su2double CEulerSolver::GetOneD_Velocity(void) {return OneD_Velocity;}
+
+inline void CEulerSolver::SetOneD_Velocity(su2double VelocityAvg) {OneD_Velocity = VelocityAvg; }
+
+inline su2double CEulerSolver::GetOneD_Density(void) {return OneD_Density;}
+
+inline void CEulerSolver::SetOneD_Density(su2double DensityAvg) {OneD_Density = DensityAvg; }
 
 inline su2double CEulerSolver::GetOneD_FluxAvgPress(void) {return OneD_PressureRef;}
 
