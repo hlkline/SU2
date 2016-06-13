@@ -205,6 +205,8 @@ def get_headerMap():
                  "FluxAvg_Pressure": "AVG_OUTLET_PRESSURE"     ,
                  "FluxAvg_Density" : "FLUXAVG_OUTLET_DENSITY"  ,
                  "FluxAvg_Velocity": "FLUXAVG_OUTLET_VELOCITY" ,
+                  "AreaAvg_Density": "AVG_OUTLET_DENSITY"     ,
+                 "AreaAvg_Velocity": "AVG_OUTLET_VELOCITY"     ,
                  "Avg_Mach"        : "AVG_OUTLET_MACH"         ,
                  "Avg_Temperature" : "AVG_OUTLET_TEMPERATURE"  ,
                  "MassFlowRate"    : "MASS_FLOW_RATE"          ,
