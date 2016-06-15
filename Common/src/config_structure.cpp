@@ -1623,14 +1623,14 @@ void CConfig::SetPostprocessing(unsigned short val_software, unsigned short val_
     unsigned short jMarker=0;
     nMarker_Out_1D = 0;
     for (iMarker=0; iMarker<nMarker_Monitoring; iMarker++){
-      if (Kind_ObjFunc[iMarker]== AVG_OUTLET_PRESSURE || Kind_ObjFunc[iMarker] == AVG_TOTAL_PRESSURE || Kind_ObjFunc[iMarker]==OUTFLOW_GENERALIZED) {
+      if (Kind_ObjFunc[iMarker]== CUSTOM_ALG || Kind_ObjFunc[iMarker]== AVG_OUTLET_PRESSURE || Kind_ObjFunc[iMarker] == AVG_TOTAL_PRESSURE || Kind_ObjFunc[iMarker]==OUTFLOW_GENERALIZED) {
         Wrt_1D_Output = YES;
         nMarker_Out_1D++;
       }
     }
     Marker_Out_1D = new string[nMarker_Out_1D];
     for (iMarker=0; iMarker<nMarker_Monitoring; iMarker++){
-      if (Kind_ObjFunc[iMarker]== AVG_OUTLET_PRESSURE || Kind_ObjFunc[iMarker] == AVG_TOTAL_PRESSURE || Kind_ObjFunc[iMarker]==OUTFLOW_GENERALIZED) {
+      if (Kind_ObjFunc[iMarker]== CUSTOM_ALG || Kind_ObjFunc[iMarker]== AVG_OUTLET_PRESSURE || Kind_ObjFunc[iMarker] == AVG_TOTAL_PRESSURE || Kind_ObjFunc[iMarker]==OUTFLOW_GENERALIZED) {
         Marker_Out_1D[jMarker] = Marker_Monitoring[iMarker];
         jMarker++;
       }
@@ -3444,6 +3444,7 @@ void CConfig::SetOutput(unsigned short val_software, unsigned short val_izone) {
         case AVG_OUTLET_PRESSURE:     cout << "Average static objective pressure." << endl; break;
         case MASS_FLOW_RATE:          cout << "Mass flow rate objective function." << endl; break;
         case OUTFLOW_GENERALIZED:     cout << "Generalized outflow objective function." << endl; break;
+        case CUSTOM_ALG:     cout << "Generalized outflow objective function." << endl; break;
       }
 		}
 		else{
@@ -4783,6 +4784,7 @@ string CConfig::GetObjFunc_Extension(string val_filename) {
       case AVG_OUTLET_PRESSURE:     AdjExt = "_pe";       break;
       case MASS_FLOW_RATE:          AdjExt = "_mfr";       break;
       case OUTFLOW_GENERALIZED:     AdjExt = "_chn";       break;
+      case CUSTOM_ALG:     AdjExt = "_tmp";       break;
       }
     }
     else{

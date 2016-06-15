@@ -7233,7 +7233,7 @@ void COutput::OneDimensionalOutput(CSolver *solver_container, CGeometry *geometr
           MassFlowRate += RhoUA; // RhoU is rho * vn * Area
           VelocityRef+=RhoUA*U*U; // rho u A
           EnthalpyRef+=RhoUA*Enthalpy;
-          VelocityAvg+=U*Area;
+          VelocityAvg+=U*Area; // Normal velocity
           DensityAvg+=solver_container->node[iPoint]->GetDensity()*Area;
           
         }
