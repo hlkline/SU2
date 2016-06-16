@@ -368,7 +368,7 @@ void CDiscAdjSolver::RegisterObj_Func(CConfig *config){
     su2double P3 = direct_solver->GetOneD_FluxAvgPress();
     su2double rho3 =direct_solver->GetOneD_Density();
     su2double V3 =direct_solver->GetOneD_Velocity();
-    ObjFunc_Value =P3/rho3 + V3/P3 + rho3*V3 - V3**2.0;
+    ObjFunc_Value =P3/rho3 + V3/P3 + rho3*V3 - pow(V3,2.0);
     break;
  /*--- Template for new objective functions where TemplateObjFunction()
   *  is the routine that returns the obj. function value. The computation
