@@ -96,39 +96,24 @@ def continuous_adjoint( filename           ,
         state.update(info)
         SU2.io.restart2solution(config,state)
 
+    # Adjoint Solution
+    objectives      = config['OBJECTIVE_FUNCTION']
+    objectives = objectives.split(',')
+    n_obj = len(objectives)
+    marker_monitoring = config['MARKER_MONITORING']
+
     # If using chain rule update coefficients using gradients as defined in downstream_function (local file)
     if 'OUTFLOW_GENERALIZED' in config.OBJECTIVE_FUNCTION:
         import downstream_function # Must be defined in run folder
         chaingrad = downstream_function.downstream_gradient(config,state,step)
         # Set coefficients for gradients
         config.OBJ_CHAIN_RULE_COEFF = str(chaingrad[0:5])
-    
-    # Adjoint Solution
-    objectives      = config['OBJECTIVE_FUNCTION']
-    objectives = objectives.split(',')
-    n_obj = len(objectives)
-    marker_monitoring = config['MARKER_MONITORING']
-    if (config.COMBINE_OBJECTIVE=="YES"):
-        # Run all-at-once 
-        if compute:
-            info = SU2.run.adjoint(config)
-            state.update(info)
-        info = SU2.run.projection(config,state, step)
+    # Run all-at-once 
+    if compute:
+        info = SU2.run.adjoint(config)
         state.update(info)
-    else:
-        for i_obj, objective in enumerate(objectives):
-            if (n_obj>1) and (type(marker_monitoring)==list):
-                config['MARKER_MONITORING'] = marker_monitoring[i_obj]
-                
-            config['OBJECTIVE_FUNCTION'] = objective
-            if compute:
-                info = SU2.run.adjoint(config)
-                state.update(info)
-                #SU2.io.restart2solution(config,state)
-            
-            # Gradient Projection
-            info = SU2.run.projection(config,state, step)
-            state.update(info)
+    info = SU2.run.projection(config,state, step)
+    state.update(info)
     
     return state
 

@@ -61,6 +61,10 @@ CTransLMSolver::CTransLMSolver(CGeometry *geometry, CConfig *config, unsigned sh
 	
 	/*--- Dimension of the problem --> 2 Transport equations (intermittency, Reth) ---*/
 	nVar = 2;
+  
+  /*--- Initialize nVarGrad for deallocation ---*/
+  
+  nVarGrad = nVar;
 	
 	if (iMesh == MESH_0) {
 		
@@ -181,27 +185,7 @@ CTransLMSolver::CTransLMSolver(CGeometry *geometry, CConfig *config, unsigned sh
 }
 
 CTransLMSolver::~CTransLMSolver(void) {
-	unsigned short iVar, iDim;
 	
-	delete [] Residual; delete [] Residual_Max;
-	delete [] Residual_i; delete [] Residual_j;
-	delete [] Solution;
-	delete [] Solution_i; delete [] Solution_j;
-	delete [] Vector_i; delete [] Vector_j;
-	
-	for (iVar = 0; iVar < nVar; iVar++) {
-		delete [] Jacobian_i[iVar];
-		delete [] Jacobian_j[iVar];
-	}
-	delete [] Jacobian_i; delete [] Jacobian_j;
-	
-	for (iDim = 0; iDim < this->nDim; iDim++)
-		delete [] Smatrix[iDim];
-	delete [] Smatrix;
-	
-	for (iVar = 0; iVar < nVar; iVar++)
-		delete [] cvector[iVar];
-	delete [] cvector;
 }
 
 void CTransLMSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container, CConfig *config, unsigned short iMesh, unsigned short iRKStep, unsigned short RunTime_EqSystem, bool Output) {
@@ -505,6 +489,12 @@ void CTransLMSolver::BC_HeatFlux_Wall(CGeometry *geometry, CSolver **solver_cont
 //      }
 //		}
 //	}
+  
+  delete [] U_domain;
+  delete [] U_wall;
+  delete [] Normal;
+  delete [] Residual;
+  
 }
 
 void CTransLMSolver::BC_Far_Field(CGeometry *geometry, CSolver **solver_container, CNumerics *conv_numerics, CNumerics *visc_numerics, CConfig *config, unsigned short val_marker) {

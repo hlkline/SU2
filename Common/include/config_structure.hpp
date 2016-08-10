@@ -125,7 +125,6 @@ private:
   unsigned short Kind_Regime;  /*!< \brief Kind of adjoint function. */
   unsigned short *Kind_ObjFunc;  /*!< \brief Kind of objective function. */
   su2double *Weight_ObjFunc;    /*!< \brief Weight applied to objective function. */
-  bool ComboObjective;        /*!< \brief boolean to determine whether to internally combine a list of objectives or treat only the first */
   unsigned short Kind_SensSmooth; /*!< \brief Kind of sensitivity smoothing technique. */
   unsigned short Continuous_Eqns; /*!< \brief Which equations to treat continuously (Hybrid adjoint)*/
   unsigned short Discrete_Eqns; /*!< \brief Which equations to treat discretely (Hybrid adjoint). */
@@ -230,7 +229,7 @@ private:
 	su2double *NRBC_Var1, *NRBC_Var2;    /*!< \brief Specified values for NRBC boundary. */
 	su2double **NRBC_FlowDir;  /*!< \brief Specified flow direction vector (unit vector) for NRBC boundaries. */
 	su2double *Inlet_Ptotal;    /*!< \brief Specified total pressures for inlet boundaries. */
-	su2double **Inlet_FlowDir;  /*!< \brief Specified flow direction vector (unit vector) for inlet boundaries. */
+  su2double **Inlet_FlowDir;  /*!< \brief Specified flow direction vector (unit vector) for inlet boundaries. */
 	su2double *Inlet_Temperature;    /*!< \brief Specified temperatures for a supersonic inlet boundaries. */
 	su2double *Inlet_Pressure;    /*!< \brief Specified static pressures for supersonic inlet boundaries. */
 	su2double **Inlet_Velocity;  /*!< \brief Specified flow velocity vectors for supersonic inlet boundaries. */
@@ -283,6 +282,7 @@ private:
 	unsigned long Dyn_nIntIter;			/*!< \brief Number of internal iterations (Newton-Raphson Method for nonlinear structural analysis). */
   long Unst_RestartIter;			/*!< \brief Iteration number to restart an unsteady simulation (Dual time Method). */
   long Unst_AdjointIter;			/*!< \brief Iteration number to begin the reverse time integration in the direct solver for the unsteady adjoint. */
+  long Iter_Avg_Objective;			/*!< \brief Iteration the number of time steps to be averaged, counting from the back */
   long Dyn_RestartIter;			/*!< \brief Iteration number to restart a dynamic structural analysis. */
   unsigned short nRKStep;			/*!< \brief Number of steps of the explicit Runge-Kutta method. */
 	su2double *RK_Alpha_Step;			/*!< \brief Runge-Kutta beta coefficients. */
@@ -421,6 +421,7 @@ private:
   unsigned short Deform_Stiffness_Type; /*!< \brief Type of element stiffness imposed for FEA mesh deformation. */
   bool Deform_Output;  /*!< \brief Print the residuals during mesh deformation to the console. */
   su2double Deform_Tol_Factor; /*!< Factor to multiply smallest volume for deform tolerance (0.001 default) */
+  su2double Deform_Coeff; /*!< Deform coeffienct */
   unsigned short Deform_Linear_Solver; /*!< Numerical method to deform the grid */
   unsigned short FFD_Continuity; /*!< Surface continuity at the intersection with the FFD */
   su2double Deform_ElasticityMod, Deform_PoissonRatio; /*!< young's modulus and poisson ratio for volume deformation stiffness model */
@@ -433,11 +434,10 @@ private:
 	AoS;				/*!< \brief Angle of sideSlip (just external flow). */
   bool Fixed_CL_Mode;			/*!< \brief Activate fixed CL mode (external flow only). */
   su2double Target_CL;			/*!< \brief Specify a target CL instead of AoA (external flow only). */
-  su2double Damp_Fixed_CL;			/*!< \brief Damping coefficient for fixed CL mode (external flow only). */
+  su2double dCl_dAlpha;			/*!< \brief Lift curve slope for fixed CL mode (1/deg, external flow only). */
   unsigned long Iter_Fixed_CL;			/*!< \brief Iterations to re-evaluate the angle of attack (external flow only). */
   bool Update_AoA;			/*!< \brief Boolean flag for whether to update the AoA for fixed lift mode on a given iteration. */
 	su2double ChargeCoeff;		/*!< \brief Charge coefficient (just for poisson problems). */
-	su2double *U_FreeStreamND;			/*!< \brief Reference variables at the infinity, free stream values. */
 	unsigned short Cauchy_Func_Flow,	/*!< \brief Function where to apply the convergence criteria in the flow problem. */
 	Cauchy_Func_AdjFlow,				/*!< \brief Function where to apply the convergence criteria in the adjoint problem. */
 	Cauchy_Elems;						/*!< \brief Number of elements to evaluate. */
@@ -533,7 +533,9 @@ private:
 	ObjFunc_Value_FileName,			/*!< \brief Objective function. */
 	SurfFlowCoeff_FileName,			/*!< \brief Output file with the flow variables on the surface. */
 	SurfAdjCoeff_FileName,			/*!< \brief Output file with the adjoint variables on the surface. */
-	New_SU2_FileName;        		/*!< \brief Output SU2 mesh file converted from CGNS format. */
+  New_SU2_FileName,       		/*!< \brief Output SU2 mesh file converted from CGNS format. */
+  SurfSens_FileName,			/*!< \brief Output file for the sensitivity on the surface (discrete adjoint). */
+  VolSens_FileName;			/*!< \brief Output file for the sensitivity in the volume (discrete adjoint). */
 	bool Low_MemoryOutput,      /*!< \brief Write a volume solution file */
   Wrt_Vol_Sol,                /*!< \brief Write a volume solution file */
 	Wrt_Srf_Sol,                /*!< \brief Write a surface solution file */
@@ -705,6 +707,8 @@ private:
   su2double Static_Time;			/*!< \brief Time while the structure is not loaded in FSI applications. */
   unsigned short Pred_Order;  /*!< \brief Order of the predictor for FSI applications. */
   unsigned short Kind_Interpolation; /*!\brief type of interpolation to use for FSI applications. */
+  bool Prestretch;             /*!< Read a reference geometry for optimization purposes. */
+  string Prestretch_FEMFileName;         /*!< \brief File name for reference geometry. */
   unsigned long Nonphys_Points, /*!< \brief Current number of non-physical points in the solution. */
   Nonphys_Reconstr;      /*!< \brief Current number of non-physical reconstructions for 2nd-order upwinding. */
   bool ParMETIS;      /*!< \brief Boolean for activating ParMETIS mode (while testing). */
@@ -712,6 +716,16 @@ private:
   bool DiscreteAdjoint; /*!< \brief AD-based discrete adjoint mode. */
   string Gradient_Filename; /*! \brief input file for external gradients as inputs to generalized adjoint. */
 
+  su2double *default_vel_inf, /*!< \brief Default freestream velocity array for the COption class. */
+  *default_eng_box,           /*!< \brief Default engine box array for the COption class. */
+  *default_cfl_adapt,         /*!< \brief Default CFL adapt param array for the COption class. */
+  *default_ad_coeff_flow,     /*!< \brief Default artificial dissipation (flow) array for the COption class. */
+  *default_ad_coeff_adj,      /*!< \brief Default artificial dissipation (adjoint) array for the COption class. */
+  *default_obj_coeff,         /*!< \brief Default objective array for the COption class. */
+  *default_geo_loc,           /*!< \brief Default SU2_GEO section locations array for the COption class. */
+  *default_ea_lim,            /*!< \brief Default equivalent area limit array for the COption class. */
+  *default_grid_fix,          /*!< \brief Default fixed grid (non-deforming region) array for the COption class. */
+  *default_inc_crit;          /*!< \brief Default incremental criteria array for the COption class. */
   
   /*--- all_options is a map containing all of the options. This is used during config file parsing
   to track the options which have not been set (so the default values can be used). Without this map
@@ -826,13 +840,13 @@ private:
 
   void addDoubleArrayOption(const string name, const int size, su2double * & option_field, su2double * default_value) {
 
-    su2double * def = new su2double [size];
-    for (int i = 0; i < size; i++) {
-      def[i] = default_value[i];
-    }
+  //  su2double * def = new su2double [size];
+  //  for (int i = 0; i < size; i++) {
+  //    def[i] = default_value[i];
+  //  }
     assert(option_map.find(name) == option_map.end());
     all_options.insert(pair<string, bool>(name, true));
-    COptionBase* val = new COptionDoubleArray(name, size, option_field, def);
+    COptionBase* val = new COptionDoubleArray(name, size, option_field, default_value);
     option_map.insert(pair<string, COptionBase *>(name, val));
   }
 
@@ -1575,6 +1589,19 @@ public:
 	 */
 	unsigned short GetElas2D_Formulation(void);
 
+  /*!
+    * \brief Decide whether it's necessary to read a reference geometry.
+    * \return <code>TRUE</code> if it's necessary to read a reference geometry, <code>FALSE</code> otherwise.
+    */
+
+  bool GetPrestretch(void);
+
+  /*!
+   * \brief Get the name of the file with the reference geometry of the structural problem.
+   * \return Name of the file with the reference geometry of the structural problem.
+   */
+  string GetPrestretch_FEMFileName(void);
+
 	/*!
 	 * \brief Get the Poisson's ratio.
 	 * \return Value of the Poisson's ratio.
@@ -2188,7 +2215,13 @@ public:
   long GetUnst_AdjointIter(void);
 
   /*!
-	 * \brief Get the restart iteration number for dynamic structural simulations.
+  * \brief Number of iterations to average (reverse time integration).
+  * \return Starting direct iteration number for the unsteady adjoint.
+  */
+  unsigned long GetIter_Avg_Objective(void);
+
+  /*!
+   * \brief Get the restart iteration number for dynamic structural simulations.
 	 * \return Restart iteration number for dynamic structural simulations.
 	 */
   long GetDyn_RestartIter(void);
@@ -2400,7 +2433,7 @@ public:
 	 */
 	string GetMarker_EngineExhaust(unsigned short val_marker);
 
-    /*!
+  /*!
 	 * \brief Get the name of the surface defined in the geometry file.
 	 * \param[in] val_marker - Value of the marker in which we are interested.
 	 * \return Name that is in the geometry file for the surface that
@@ -2915,6 +2948,12 @@ public:
 	 * \return Factor to multiply smallest volume for deform tolerance.
 	 */
 	su2double GetDeform_Tol_Factor(void);
+  
+  /*!
+   * \brief Get factor to multiply smallest volume for deform tolerance.
+   * \return Factor to multiply smallest volume for deform tolerance.
+   */
+  su2double GetDeform_Coeff(void);
 
   /*!
    * \brief Get Young's modulus for deformation (constant stiffness deformation)
@@ -3947,6 +3986,18 @@ public:
 	 * \return Name of the file with the surface information for the adjoint problem.
 	 */
 	string GetSurfAdjCoeff_FileName(void);
+
+  /*!
+   * \brief Get the name of the file with the surface sensitivity (discrete adjoint).
+   * \return Name of the file with the surface sensitivity (discrete adjoint).
+   */
+  string GetSurfSens_FileName(void);
+
+  /*!
+   * \brief Get the name of the file with the volume sensitivity (discrete adjoint).
+   * \return Name of the file with the volume sensitivity (discrete adjoint).
+   */
+  string GetVolSens_FileName(void);
 
   /*!
 	 * \brief Augment the input filename with the iteration number for an unsteady file.
@@ -5275,10 +5326,10 @@ public:
 	su2double GetTarget_CL(void);
 
   /*!
-	 * \brief Get the value of the damping coefficient for fixed CL mode.
-	 * \return Damping coefficient for fixed CL mode.
+	 * \brief Get the value for the lift curve slope for fixed CL mode.
+	 * \return Lift curve slope for fixed CL mode.
 	 */
-	su2double GetDamp_Fixed_CL(void);
+	su2double GetdCl_dAlpha(void);
   
   /*!
    * \brief Get the value of iterations to re-evaluate the angle of attack.

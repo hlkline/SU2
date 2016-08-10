@@ -109,6 +109,10 @@ CAdjEulerSolver::CAdjEulerSolver(CGeometry *geometry, CConfig *config, unsigned 
   if (incompressible) { nVar = nDim + 1; }
   if (freesurface) { nVar = nDim + 2; }
   
+  /*--- Initialize nVarGrad for deallocation ---*/
+  
+  nVarGrad = nVar;
+  
   node = new CVariable*[nPoint];
   
   /*--- Define some auxiliary vectors related to the residual ---*/
@@ -440,7 +444,7 @@ CAdjEulerSolver::CAdjEulerSolver(CGeometry *geometry, CConfig *config, unsigned 
   }
 
 
-  if (config->GetnObj()>1){
+  if (config->GetnObj()>1 and iMesh==MESH_0){
     if (grid_movement) {
       Mach2Vel = sqrt(Gamma*Gas_Constant*config->GetTemperature_FreeStreamND());
       RefVel2 = (Mach_Motion*Mach2Vel)*(Mach_Motion*Mach2Vel);
@@ -1410,8 +1414,19 @@ void CAdjEulerSolver::SetIntBoundary_Jump(CGeometry *geometry, CSolver **solver_
     for (AngleInt = 0; AngleInt < 180; AngleInt++)
       IndexNF_inv[AngleInt] = -1;
     
-    for (iIndex = 0; iIndex < IndexNF.size(); iIndex++)
-      IndexNF_inv[IndexNF[iIndex]] = iIndex;
+	if (IndexNF.size() <= 180) {
+		for (iIndex = 0; iIndex < IndexNF.size(); iIndex++)
+			IndexNF_inv[IndexNF[iIndex]] = iIndex;
+	}
+	else {
+		#ifndef HAVE_MPI
+				exit(EXIT_FAILURE);
+		#else
+				MPI_Barrier(MPI_COMM_WORLD);
+				MPI_Abort(MPI_COMM_WORLD, 1);
+				MPI_Finalize();
+		#endif
+	}
     
   }
   
@@ -2639,11 +2654,6 @@ void CAdjEulerSolver::Inviscid_Sensitivity(CGeometry *geometry, CSolver **solver
           
           CSensitivity[iMarker][iVertex] = (d_press + grad_v + v_gradconspsi) * Area * scale * factor;
           
-          /*--- Change the sign of the sensitivity if the normal has been flipped --*/
-          
-          if (geometry->node[iPoint]->GetFlip_Orientation())
-            CSensitivity[iMarker][iVertex] = -CSensitivity[iMarker][iVertex];
-
           /*--- If sharp edge, set the sensitivity to 0 on that region ---*/
           
           if (config->GetSens_Remove_Sharp()) {
@@ -4805,14 +4815,6 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         This occurs when subsonic, or for certain objective functions ---*/
         if ( Psi_outlet[nVar-1]!=0.0 ){
           /*--- Shorthand for repeated term in the boundary conditions ---*/
-          /* Characteristic-based version
-          a1 = SoundSpeed/Gamma_Minus_One;
-          Psi_outlet[0] += Psi_outlet[nVar-1]*(Velocity2*0.5+Vn_rel*a1);
-          for (iDim = 0; iDim < nDim; iDim++) {
-            Psi_outlet[iDim+1] += -Psi_outlet[nVar-1]*(a1*UnitNormal[iDim] + Velocity[iDim]);
-          }
-           */
-          /*Constant-pressure version*/
           a1 = 0.0;
           if (Vn!=0.0)
             a1 = SoundSpeed*SoundSpeed/Gamma_Minus_One/Vn;
@@ -4915,13 +4917,6 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         Velocity2  = 0.0;
         for (iDim = 0; iDim < nDim; iDim++)
           Velocity2 += Velocity[iDim]*Velocity[iDim];
-        /* Characteristic-based version
-        a1 = 1.0/(SoundSpeed+Vn_Exit);
-        Psi_outlet[0]-=a1*SoundSpeed*Velocity2/Vn_rel;
-        for (iDim = 0; iDim < nDim; iDim++)
-          Psi_outlet[iDim+1] +=a1*UnitNormal[iDim]*(-Velocity2)/(2.0*Vn_Exit)+Velocity[iDim]/Vn_Exit;
-         */
-        /*Pressure-fixed version*/
         if (Vn_Exit !=0.0){
           a2 = Pressure*(Gamma/Gamma_Minus_One)*pow((1.0+Gamma_Minus_One*Density*Velocity2/(2.0*Gamma*Pressure)),1.0/(Gamma_Minus_One));
           density_gradient = a2*(Gamma_Minus_One*Velocity2/(2.0*Gamma*Pressure));
@@ -4934,13 +4929,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         }
         break;
       case AVG_OUTLET_PRESSURE:
-        /* Characteristic-based version
-        a1 = 1.0/(SoundSpeed+Vn_Exit);
-        Psi_outlet[0]+=-SoundSpeed*Vn_Exit*a1;
-        for (iDim = 0; iDim < nDim; iDim++)
-          Psi_outlet[iDim+1]+=UnitNormal[iDim]*SoundSpeed*a1;
-         */
-        /*Pressure-fixed version: all 0s*/
+        /*0.0*/
         break;
       default:
         break;
@@ -5391,6 +5380,7 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
   su2double dull_val, Area=0.0, *Normal = NULL, myArea_Monitored;
   su2double RefVel2, Mach2Vel, obj_weight, factor;
   su2double *Velocity_Inf;
+
   string Marker_Tag, Monitoring_Tag;
   unsigned short iMarker_Monitoring, jMarker, ObjFunc;
   bool grid_movement  = config->GetGrid_Movement();
@@ -5424,6 +5414,10 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
   if (compressible) { nVar = nDim + 2; }
   if (incompressible) { nVar = nDim + 1; }
   if (freesurface) { nVar = nDim + 1; }
+  
+  /*--- Initialize nVarGrad for deallocation ---*/
+  
+  nVarGrad = nVar;
   
   node = new CVariable*[nPoint];
   
@@ -5723,7 +5717,7 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
      }
    }
 
-   if (config->GetnObj()>1){
+   if (config->GetnObj()>1 and iMesh == MESH_0){
      if (grid_movement) {
        Mach2Vel = sqrt(Gamma*Gas_Constant*config->GetTemperature_FreeStreamND());
        RefVel2 = (Mach_Motion*Mach2Vel)*(Mach_Motion*Mach2Vel);
@@ -5751,6 +5745,7 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
 
         obj_weight = obj_weight*factor;
         config->SetWeight_ObjFunc(iMarker_Monitoring, obj_weight);
+
      }
    }
 
@@ -6386,11 +6381,6 @@ void CAdjNSSolver::Viscous_Sensitivity(CGeometry *geometry, CSolver **solver_con
           
           CSensitivity[iMarker][iVertex] = (sigma_partial - temp_sens) * Area * scale * factor;
             
-          /*--- Change the sign of the sensitivity if the normal has been flipped --*/
-
-          if (geometry->node[iPoint]->GetFlip_Orientation())
-            CSensitivity[iMarker][iVertex] = -CSensitivity[iMarker][iVertex];
-          
           /*--- If sharp edge, set the sensitivity to 0 on that region ---*/
           
           if (config->GetSens_Remove_Sharp()) {
@@ -6678,12 +6668,13 @@ void CAdjNSSolver::Viscous_Sensitivity(CGeometry *geometry, CSolver **solver_con
   delete [] tang_deriv_psi5;
   delete [] tang_deriv_T;
   for (iDim = 0; iDim < nDim; iDim++)
-    delete Sigma[iDim];
+    delete [] Sigma[iDim];
   delete [] Sigma;
   delete [] normal_grad_gridvel;
   delete [] normal_grad_v_ux;
   for (iDim = 0; iDim < nDim; iDim++)
-    delete Sigma_Psi5v[iDim];
+    delete [] Sigma_Psi5v[iDim];
+  delete [] Sigma_Psi5v;
   for (iDim = 0; iDim < nDim; iDim++)
     delete tau[iDim];
   delete [] tau;
@@ -7126,7 +7117,6 @@ void CAdjNSSolver::BC_Isothermal_Wall(CGeometry *geometry, CSolver **solver_cont
   string Monitoring_Tag;
   unsigned short jMarker, iMarker_Monitoring=0;
   su2double obj_weight = 1.0;
-  su2double beta = 1.0;
 
   
   /*--- Identify marker monitoring index ---*/

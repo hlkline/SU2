@@ -63,7 +63,7 @@ def main():
     
     sys.stdout.write('\n-------------------------------------------------------------------------\n')
     sys.stdout.write('|    ___ _   _ ___                                                      |\n')
-    sys.stdout.write('|   / __| | | |_  )   Release 4.1.1 \"Cardinal\"                          |\n')
+    sys.stdout.write('|   / __| | | |_  )   Release 4.2.0 \"Cardinal\"                          |\n')
     sys.stdout.write('|   \\__ \\ |_| |/ /                                                      |\n')
     sys.stdout.write('|   |___/\\___//___|   Aerodynamic Shape Optimization Script             |\n')
     sys.stdout.write('|                                                                       |\n')

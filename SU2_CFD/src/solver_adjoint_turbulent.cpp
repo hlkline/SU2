@@ -53,6 +53,10 @@ CAdjTurbSolver::CAdjTurbSolver(CGeometry *geometry, CConfig *config, unsigned sh
 		case SST :    nVar = 2; break;
 	}
   
+  /*--- Initialize nVarGrad for deallocation ---*/
+  
+  nVarGrad = nVar+1;
+  
   nPoint = geometry->GetnPoint();
   nPointDomain = geometry->GetnPointDomain();
   
@@ -196,19 +200,6 @@ CAdjTurbSolver::CAdjTurbSolver(CGeometry *geometry, CConfig *config, unsigned sh
 }
 
 CAdjTurbSolver::~CAdjTurbSolver(void) {
-    
-	for (unsigned short iVar = 0; iVar < nVar; iVar++) {
-		delete [] Jacobian_ii[iVar];
-		delete [] Jacobian_ij[iVar];
-    delete [] Jacobian_ji[iVar];
-		delete [] Jacobian_jj[iVar];
-	}
-  
-  delete [] Jacobian_ii;
-  delete [] Jacobian_ij;
-  delete [] Jacobian_ji;
-  delete [] Jacobian_jj;
-  
 }
 
 void CAdjTurbSolver::Set_MPI_Solution(CGeometry *geometry, CConfig *config) {

@@ -49,6 +49,10 @@ CPoissonSolver::CPoissonSolver(CGeometry *geometry, CConfig *config) : CSolver()
 	nVar =          1;
 	node =          new CVariable*[nPoint];
   
+  /*--- Initialize nVarGrad for deallocation ---*/
+  
+  nVarGrad = nVar;
+  
 	Residual = new su2double[nVar]; Residual_RMS = new su2double[nVar];
 	Solution = new su2double[nVar];
   Residual_Max = new su2double[nVar];
@@ -115,11 +119,8 @@ CPoissonSolver::CPoissonSolver(CGeometry *geometry, CConfig *config) : CSolver()
 
 CPoissonSolver::~CPoissonSolver(void) {
   
-	unsigned short iVar, iDim;
+	unsigned short iVar;
   
-	delete [] Residual;
-	delete [] Residual_Max;
-	delete [] Solution;
 	delete [] Source_Vector;
   
 	if (nDim == 2) {
@@ -138,14 +139,6 @@ CPoissonSolver::~CPoissonSolver(void) {
 	delete [] StiffMatrix_Elem;
 	delete [] StiffMatrix_Node;
   
-	/*--- Computation of gradients by least-squares ---*/
-	for (iDim = 0; iDim < this->nDim; iDim++)
-		delete [] Smatrix[iDim];
-	delete [] Smatrix;
-  
-	for (iVar = 0; iVar < nVar; iVar++)
-		delete [] cvector[iVar];
-	delete [] cvector;
 }
 
 void CPoissonSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container,

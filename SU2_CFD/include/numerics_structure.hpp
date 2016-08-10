@@ -51,7 +51,7 @@ using namespace std;
 /*!
  * \class CNumerics
  * \brief Class for defining the numerical methods.
- * \author F. Palacios
+ * \author F. Palacios, T. Economon
  * \version 4.2.0 "Cardinal"
  */
 class CNumerics {
@@ -74,7 +74,6 @@ public:
   su2double
   **tau,		/*!< \brief Viscous stress tensor. */
   **delta;			/*!< \brief Identity matrix. */
-  su2double **dVdU; /*!< \brief Transformation matrix from primitive variables, V, to conserved, U. */
   su2double
   *Diffusion_Coeff_i, /*!< \brief Species diffusion coefficients at point i. */
   *Diffusion_Coeff_j; /*!< \brief Species diffusion coefficients at point j. */
@@ -207,13 +206,6 @@ public:
   su2double StrainMag_i, StrainMag_j;   /*!< \brief Strain rate magnitude. */
   
   su2double *l, *m;
-  su2double *dPdU_i, *dPdU_j;
-  su2double *dTdU_i, *dTdU_j;
-  su2double *dTvedU_i, *dTvedU_j;
-  su2double *Ys, **dFdYj, **dFdYi, *sumdFdYih, *sumdFdYjh, *sumdFdYieve, *sumdFdYjeve;
-  unsigned short RHOS_INDEX, T_INDEX, TVE_INDEX, VEL_INDEX, P_INDEX,
-  RHO_INDEX, H_INDEX, A_INDEX, RHOCVTR_INDEX, RHOCVVE_INDEX;
-  CVariable *var;
   
   /*!
    * \brief Constructor of the class.
@@ -3160,9 +3152,9 @@ private:
   su2double *Edge_Vector;
   bool implicit, incompressible;
   su2double sigma;
-  su2double dist_ij_2;
-  su2double proj_vector_ij;
-  unsigned short iVar, iDim;
+  //su2double dist_ij_2;
+  //su2double proj_vector_ij;
+  //unsigned short iVar, iDim;
   
 public:
   
@@ -3970,7 +3962,7 @@ public:
 	/*!
 	 * \brief Destructor of the class.
 	 */
-	~CFEM_Elasticity(void);
+	virtual ~CFEM_Elasticity(void);
 
 	void Compute_Mass_Matrix(CElement *element_container, CConfig *config);
 
@@ -4069,7 +4061,7 @@ public:
 	/*!
 	 * \brief Destructor of the class.
 	 */
-	~CFEM_NonlinearElasticity(void);
+	virtual ~CFEM_NonlinearElasticity(void);
 
 	void Compute_Tangent_Matrix(CElement *element_container, CConfig *config);
 

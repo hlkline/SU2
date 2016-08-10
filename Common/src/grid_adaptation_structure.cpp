@@ -278,7 +278,6 @@ void CGridAdaptation::GetAdjResidual(CGeometry *geometry, CConfig *config) {
     if (config->GetKind_ObjFunc() == AVG_OUTLET_PRESSURE)      SPRINTF (buffer, "_pe.dat");
     if (config->GetKind_ObjFunc() == MASS_FLOW_RATE)          SPRINTF (buffer, "_mfr.dat");
     if (config->GetKind_ObjFunc() == OUTFLOW_GENERALIZED)       SPRINTF (buffer, "_chn.dat");
-    if (config->GetKind_ObjFunc() == CUSTOM_ALG)       SPRINTF (buffer, "_tmp.dat");
 	}
 
 	strcat(cstr, buffer);

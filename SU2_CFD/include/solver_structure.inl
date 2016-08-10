@@ -326,7 +326,7 @@ inline void CSolver::SetHeatFluxTarget(unsigned short val_marker, unsigned long 
 
 inline su2double *CSolver::GetCharacPrimVar(unsigned short val_marker, unsigned long val_vertex) { return 0; }
 
-inline su2double CSolver::GetCSkinFriction(unsigned short val_marker, unsigned long val_vertex) { return 0; }
+inline su2double CSolver::GetCSkinFriction(unsigned short val_marker, unsigned long val_vertex, unsigned short val_dim) { return 0; }
 
 inline su2double CSolver::GetHeatFlux(unsigned short val_marker, unsigned long val_vertex) { return 0; }
 
@@ -431,6 +431,8 @@ inline void CSolver::SetOneD_FluxAvgVelocity(su2double VelocityRef) { }
 inline su2double CSolver::GetOneD_FluxAvgEntalpy(void) {return 0;}
 
 inline void CSolver::SetOneD_FluxAvgEntalpy(su2double EnthalpyRef) { }
+
+inline void CSolver::SetTotal_ComboObj(su2double ComboObj) {}
 
 inline su2double CSolver::GetTotal_ComboObj(void) { return 0;}
 
@@ -561,7 +563,7 @@ inline void CSolver::BC_NonReflecting(CGeometry *geometry, CSolver **solver_cont
 
 inline void CSolver::BC_Inlet(CGeometry *geometry, CSolver **solver_container, CNumerics *conv_numerics, CNumerics *visc_numerics, 
 										 CConfig *config, unsigned short val_marker) { }
-                     
+
 inline void CSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container, CNumerics *conv_numerics, CNumerics *visc_numerics, 
 										  CConfig *config, unsigned short val_marker) { }
                       
@@ -736,6 +738,8 @@ inline void CSolver::Copy_Zone_Solution(CSolver ***solver1_solution, CGeometry *
 inline CFluidModel* CSolver::GetFluidModel(void) { return NULL;}
 
 inline CFluidModel* CEulerSolver::GetFluidModel(void) { return FluidModel;}
+
+inline void CSolver::Set_Prestretch(CGeometry *geometry, CConfig *config) { }
 										  
 inline void CSolver::Compute_StiffMatrix(CGeometry *geometry, CSolver **solver_container, CNumerics **numerics, CConfig *config) { }
 
@@ -843,6 +847,8 @@ inline su2double CEulerSolver::GetCSideForce_Inv(unsigned short val_marker) { re
 inline su2double CEulerSolver::GetCEff_Inv(unsigned short val_marker) { return CEff_Inv[val_marker]; }
 
 inline su2double CEulerSolver::GetTotal_CLift() { return Total_CLift; }
+
+inline void CEulerSolver::SetTotal_ComboObj(su2double ComboObj) {Total_ComboObj = ComboObj; }
 
 inline su2double CEulerSolver::GetTotal_ComboObj() { return Total_ComboObj; }
 
@@ -1081,7 +1087,7 @@ inline su2double CNSSolver::GetAllBound_CSideForce_Visc() { return AllBound_CSid
 
 inline su2double CNSSolver::GetAllBound_CDrag_Visc() { return AllBound_CDrag_Visc; }
 
-inline su2double CNSSolver::GetCSkinFriction(unsigned short val_marker, unsigned long val_vertex) { return CSkinFriction[val_marker][val_vertex]; }
+inline su2double CNSSolver::GetCSkinFriction(unsigned short val_marker, unsigned long val_vertex, unsigned short val_dim) { return CSkinFriction[val_marker][val_dim][val_vertex]; }
 
 inline su2double CNSSolver::GetHeatFlux(unsigned short val_marker, unsigned long val_vertex) { return HeatFlux[val_marker][val_vertex]; }
 
@@ -1190,4 +1196,18 @@ inline void CEulerSolver::SetTemperature_Inf(su2double t_inf){Temperature_Inf = 
 inline void CSolver::RegisterVariables(CGeometry *geometry, CConfig *config, bool reset){}
 
 inline void CSolver::ExtractAdjoint_Variables(CGeometry *geometry, CConfig *config){}
+
+inline void CSolver::SetFreeStream_Solution(CConfig *config){}
+
+inline void CTurbSASolver::SetFreeStream_Solution(CConfig *config){
+  for (unsigned long iPoint = 0; iPoint < nPoint; iPoint++)
+    node[iPoint]->SetSolution(0, nu_tilde_Inf);
+}
+
+inline void CTurbSSTSolver::SetFreeStream_Solution(CConfig *config){
+  for (unsigned long iPoint = 0; iPoint < nPoint; iPoint++){
+    node[iPoint]->SetSolution(0, kine_Inf);
+    node[iPoint]->SetSolution(1, omega_Inf);
+  }
+}
 
