@@ -78,8 +78,11 @@ def function( func_name, config, state=None ):
     state = su2io.State(state)
     
     multi_objective = (type(func_name)==list)
+    if multi_objective: func_name_string = func_name[0]
+    else: func_name_string = func_name
+    print state['FUNCTIONS'].keys()
     # redundancy check
-    if multi_objective or not state['FUNCTIONS'].has_key(func_name):
+    if not state['FUNCTIONS'].has_key(func_name_string):
 
         # Aerodynamics
         if multi_objective or func_name == 'ALL' or func_name in su2io.optnames_aero + su2io.grad_names_directdiff:
@@ -166,7 +169,7 @@ def aerodynamics( config, state=None ):
     # ----------------------------------------------------    
     #  Update Mesh
     # ----------------------------------------------------
-    
+    print "running update mesh in aerodynamics " 
     # does decomposition and deformation
     info = update_mesh(config,state)
     
@@ -556,7 +559,7 @@ def update_mesh(config,state=None):
         pull = []
         link = config['MESH_FILENAME']
         link = su2io.expand_part(link,config)
-        
+        print "deforming ",link
         # output redirection
         with redirect_folder('DEFORM',pull,link) as push:
             with redirect_output(log_deform):
@@ -569,7 +572,7 @@ def update_mesh(config,state=None):
                 meshname = info.FILES.MESH
                 names = su2io.expand_part( meshname , config )
                 push.extend( names )
-        
+
         #: with redirect output
         
     elif deform_set and not deform_todo:

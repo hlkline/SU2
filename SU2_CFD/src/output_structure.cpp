@@ -6873,7 +6873,7 @@ void COutput::SetResult_Files(CSolver ****solver_container, CGeometry ***geometr
       case EULER : case NAVIER_STOKES : case RANS :
         
         if (Wrt_Csv) SetSurfaceCSV_Flow(config[iZone], geometry[iZone][MESH_0], solver_container[iZone][MESH_0][FLOW_SOL], iExtIter, iZone);
-        if (Wrt_1D) SetMonitoredCSV(config[iZone], geometry[iZone][MESH_0], solver_container[iZone][MESH_0][FLOW_SOL], iExtIter, iZone);
+        //if (Wrt_1D) SetMonitoredCSV(config[iZone], geometry[iZone][MESH_0], solver_container[iZone][MESH_0][FLOW_SOL], iExtIter, iZone);
         break;
         
 

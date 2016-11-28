@@ -52,7 +52,7 @@ base_Command = os.path.join(SU2_RUN,'%s')
 slurm_job = os.environ.has_key('SLURM_JOBID')
 
 #check for tacc
-tacc_job = os.environ.has_key('TACC_PUBLIC_MACHINE')
+tacc_job = os.environ.has_key('TACC_PUBLIC_MACHINE') or os.environ.has_key('TACC_INTEL_DIR')
 comet_job = os.environ.has_key('CUDA_VISIBLE_DEVICES')
 pbs_job = os.environ.has_key('PBS_NODEFILE')
 # set mpi command
