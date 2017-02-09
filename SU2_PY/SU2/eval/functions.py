@@ -81,6 +81,7 @@ def function( func_name, config, state=None ):
     
     # check for multiple objectives
     multi_objective = (type(func_name)==list)
+
     # func_name_string is only used to check whether the function has already been evaluated. 
     func_name_string = func_name
     if multi_objective:   func_name_string = func_name[0]  
@@ -114,7 +115,18 @@ def function( func_name, config, state=None ):
         func_out = 0.0
         for func in func_name:
             sign = su2io.get_objectiveSign(func)
-            func_out+=state['FUNCTIONS'][func]*objectives[func]['SCALE']*sign
+            # Evaluate Objective Function
+            # scaling and sign
+            if objectives[func]['CTYPE']=='NONE':
+                func_out+=state['FUNCTIONS'][func]*objectives[func]['SCALE']*sign
+            else:
+                value = float(state['FUNCTIONS'][func])
+                valuec = float(objectives[func]['CVAL'])                   
+                if (objectives[func]['CTYPE']=='=' or \
+                    (objectives[func]['CTYPE']=='>' and value < valuec) or \
+                    (objectives[func]['CTYPE']=='<' and value > valuec )):
+                    func_out +=objectives[func]['SCALE']*(valuec - value)**2.0
+                
         state['FUNCTIONS']['COMBO'] = func_out
     else:
         func_out = state['FUNCTIONS'][func_name]

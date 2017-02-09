@@ -176,6 +176,24 @@ static const map<string, VERB_LEVEL> Verb_Map = CCreateMap<string, VERB_LEVEL>
 ("HIGH", VERB_HIGH);
 
 /*!
+ * \brief Type of One-Dimensionalization
+ */
+enum ONED_TYPE {
+  ONED_NONE = 0, /*!< \brief no one-dimensionalization. */
+  ONED_AREA = 1, /*!< \brief Area-weighted average. */
+  ONED_MFLUX = 2, /*!< \brief Mass-flux weighted average. */
+  ONED_LANGLEY = 3, /*!< \brief Langley Distortion method */
+  ONED_LANGLEY_V1 = 4 /*!< \brief A variation on the Langley Distortion method (uses velocity magnitude rather than momentum)*/
+};
+static const map<string, ONED_TYPE> OneD_Map = CCreateMap<string, ONED_TYPE>
+("NONE", ONED_NONE)
+("AREA", ONED_AREA)
+("MASSFLUX", ONED_MFLUX)
+("LANGLEY", ONED_LANGLEY)
+("LANGLEY1", ONED_LANGLEY_V1);
+
+
+/*!
  * \brief different solver types for the CFD component
  */
 enum ENUM_SOLVER {
@@ -1167,7 +1185,8 @@ enum ENUM_PARAM {
   CUSTOM = 24,               /*!< 'CUSTOM' for use in external python analysis. */
   NO_DEFORMATION = 25,		   /*!< \brief No Deformation. */
   ANGLE_OF_ATTACK = 101,	   /*!< \brief Angle of attack for airfoils. */
-  FFD_ANGLE_OF_ATTACK = 102	 /*!< \brief Angle of attack for FFD problem. */
+  FFD_ANGLE_OF_ATTACK = 102,	 /*!< \brief Angle of attack for FFD problem. */
+  FFD_PLANE = 23              /*!< \brief planar movement for FFD problem. */
 };
 static const map<string, ENUM_PARAM> Param_Map = CCreateMap<string, ENUM_PARAM>
 ("FFD_SETTING", FFD_SETTING)
@@ -1176,6 +1195,7 @@ static const map<string, ENUM_PARAM> Param_Map = CCreateMap<string, ENUM_PARAM>
 ("FFD_ANGLE_OF_ATTACK", FFD_ANGLE_OF_ATTACK)
 ("FFD_CAMBER_2D", FFD_CAMBER_2D)
 ("FFD_THICKNESS_2D", FFD_THICKNESS_2D)
+("FFD_PLANE", FFD_PLANE)
 ("HICKS_HENNE", HICKS_HENNE)
 ("SURFACE_BUMP", SURFACE_BUMP)
 ("ANGLE_OF_ATTACK", ANGLE_OF_ATTACK)
@@ -2159,6 +2179,7 @@ public:
         case FFD_THICKNESS:        nParamDV = 3; break;
         case FFD_ANGLE_OF_ATTACK:  nParamDV = 2; break;
         case SURFACE_FILE:         nParamDV = 0; break;
+        case FFD_PLANE:            nParamDV = 3; break;
         case CUSTOM:               nParamDV = 1; break;
         default : {
           string newstring;
@@ -2187,7 +2208,8 @@ public:
              (this->design_variable[iDV] == FFD_ROTATION) ||
              (this->design_variable[iDV] == FFD_CONTROL_SURFACE) ||
              (this->design_variable[iDV] == FFD_CAMBER) ||
-             (this->design_variable[iDV] == FFD_THICKNESS))) {
+             (this->design_variable[iDV] == FFD_THICKNESS) ||
+             (this->design_variable[iDV] == FFD_PLANE) )) {
               ss >> this->FFDTag[iDV];
               this->paramDV[iDV][iParamDV] = 0;
             }

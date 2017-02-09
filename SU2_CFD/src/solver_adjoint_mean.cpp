@@ -493,10 +493,11 @@ CAdjEulerSolver::CAdjEulerSolver(CGeometry *geometry, CConfig *config, unsigned 
         ObjFunc = config->GetKind_ObjFunc(iMarker_Monitoring);
         if ((ObjFunc == INVERSE_DESIGN_HEATFLUX) ||
             (ObjFunc == TOTAL_HEATFLUX) || (ObjFunc == MAXIMUM_HEATFLUX) ||
-            (ObjFunc == MASS_FLOW_RATE) ) factor = 1.0;
+            (ObjFunc == MASS_FLOW_RATE) || (ObjFunc == OUTFLOW_GENERALIZED))
+          factor = 1.0;
 
-       if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE) ||
-           (ObjFunc == OUTFLOW_GENERALIZED)) factor = 1.0/Area_Monitored;
+       if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE))
+         factor = 1.0/Area_Monitored;
 
        Weight_ObjFunc = Weight_ObjFunc*factor;
        config->SetWeight_ObjFunc(iMarker_Monitoring, Weight_ObjFunc);
@@ -3483,11 +3484,11 @@ void CAdjEulerSolver::Inviscid_Sensitivity(CGeometry *geometry, CSolver **solver
     factor = 1.0/(0.5*RefDensity*RefAreaCoeff*RefVel2);
     if ((ObjFunc == INVERSE_DESIGN_HEATFLUX)  ||
         (ObjFunc == TOTAL_HEATFLUX) || (ObjFunc == MAXIMUM_HEATFLUX) ||
-  (ObjFunc == MASS_FLOW_RATE) )
+        (ObjFunc == MASS_FLOW_RATE) || (ObjFunc == OUTFLOW_GENERALIZED))
       factor = 1.0;
 
-    if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE) ||
-       (ObjFunc == OUTFLOW_GENERALIZED)) factor = 1.0/Area_Monitored;
+    if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE))
+      factor = 1.0/Area_Monitored;
 
   }
 
@@ -5105,18 +5106,30 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
   
   unsigned short iVar, iDim;
   unsigned long iVertex, iPoint, Point_Normal;
-  su2double Pressure=0.0, P_Exit=0.0,  Velocity2 = 0.0, Area=0.0, Density=0.0,
-      Vn = 0.0, SoundSpeed = 0.0, Vn_Exit=0.0, ProjGridVel = 0.0,
-      Riemann=0.0, Entropy=0.0, Vn_rel=0.0;
-  su2double Velocity[3], UnitNormal[3];
-  su2double *V_outlet, *V_domain, *Psi_domain, *Psi_outlet, *Normal;
-  su2double a1=0.0, a2=0.0; /*Placeholder terms to simplify expressions/ repeated terms*/
-  /*Gradient terms for the generalized boundary */
-  su2double density_gradient=0.0, pressure_gradient=0.0, velocity_gradient=0.0;
-
   bool implicit = (config->GetKind_TimeIntScheme_AdjFlow() == EULER_IMPLICIT);
   bool grid_movement  = config->GetGrid_Movement();
-  su2double Weight_ObjFunc = 1.0;  
+  /*---Local flow quantities---*/
+  su2double Pressure=0.0, P_Exit=0.0,  Velocity2 = 0.0, Area=0.0, Density=0.0, Height=0.0,
+      Vn = 0.0, SoundSpeed = 0.0,  LevelSet=0.0, Vn_Exit=0.0, ProjGridVel = 0.0,
+      Riemann=0.0, Entropy=0.0, Density_Outlet = 0.0, Vn_rel=0.0;
+  su2double Velocity[3]={0.0,0.0,0.0}, UnitNormal[3]={0.0,0.0,0.0};
+  su2double avg_enthalpy  = 0.0, avg_pressure  = 0.0,one_over_mdot = 0.0, avg_vel = 0.0, avg_vel2  = 0.0,
+      avg_density=0.0;
+  /*---Solution value containers---*/
+  su2double *V_outlet, *V_domain, *Psi_domain, *Psi_outlet, *Normal;
+  /*---Placeholder terms and simplifying expressions/ repeated terms---*/
+  su2double a1=0.0, a2=0.0, dvdr=0.0;
+  su2double density_gradient=0.0, pressure_gradient=0.0, velocity_gradient=0.0;
+  /*--- ---*/
+  su2double FreeSurface_Zero = config->GetFreeSurface_Zero();
+  su2double PressFreeSurface = solver_container[FLOW_SOL]->GetPressure_Inf();
+  su2double epsilon          = config->GetFreeSurface_Thickness();
+  su2double RatioDensity     = config->GetRatioDensity();
+  su2double Froude           = config->GetFroude();
+  su2double Weight_ObjFunc = 1.0;
+  /*--- partial derivative of the objective kernal wrt local primitive variables ---*/
+  su2double dobj_dV[5] = {0.0,0.0,0.0,0.0,0.0};
+
   string Marker_Tag = config->GetMarker_All_TagBound(val_marker);
   string Monitoring_Tag;
   unsigned short jMarker=0, iMarker_Monitoring=0;
@@ -5131,6 +5144,16 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
       iMarker_Monitoring = jMarker;
   }
 
+  if (config->GetKind_ObjFunc(iMarker_Monitoring) == OUTFLOW_GENERALIZED){
+    if (config->GetKind_OneD() == ONED_AREA || config->GetKind_OneD() == ONED_NONE){
+      for (iVar=0; iVar<5; iVar++)
+        dobj_dV[iVar] =config->GetCoeff_ObjChainRule(iVar)/Area_Monitored;
+    }
+    else{
+      for (iVar=0; iVar<5; iVar++)
+        dobj_dV[iVar] = 0.0;
+    }
+  }
   Weight_ObjFunc = config->GetWeight_ObjFunc(iMarker_Monitoring);
 
   /*--- Loop over all the vertices ---*/
@@ -5199,13 +5222,89 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           ProjGridVel += GridVel[iDim]*UnitNormal[iDim];
       }
 
-      Pressure = V_domain[nDim+1];
-      SoundSpeed = sqrt(Pressure*Gamma/Density);
+        /*--- Set chain rule/ generalized outflow coefficients ---*/
+        /*--- Requires translation between gradients w.r.t. averaged quantities and w.r.t local quantities --*/
+        if (config->GetKind_ObjFunc(iMarker_Monitoring) == OUTFLOW_GENERALIZED){
+          switch(config->GetKind_OneD()){
+          case ONED_LANGLEY:
+            avg_enthalpy  = solver_container[FLOW_SOL]->GetOneD_AvgEnthalpy();
+            avg_pressure  = solver_container[FLOW_SOL]->GetOneD_AvgPress();
+            avg_vel       = solver_container[FLOW_SOL]->GetOneD_AvgVelocity();
+            avg_vel2      = pow(avg_vel,2.0);
+            one_over_mdot = 1.0/solver_container[FLOW_SOL]->GetOneD_MassFlowRate();
+            /* Some repeated terms */
+            dvdr = 0.5/avg_vel*one_over_mdot*Vn*(pow(Vn,2.0) - avg_vel2);
+            a1   = Gamma/Gamma_Minus_One/(avg_enthalpy);
+            a2   = 0.5/avg_vel*(3.0*pow(Vn,2.0) - avg_vel2)*Density*one_over_mdot;
+            /*--- TODO: finish this part ---*/
+            break;
+          case ONED_LANGLEY_V1:
+            avg_enthalpy  = solver_container[FLOW_SOL]->GetOneD_AvgEnthalpy();
+            avg_pressure  = solver_container[FLOW_SOL]->GetOneD_AvgPress();
+            avg_vel       = solver_container[FLOW_SOL]->GetOneD_AvgVelocity();
+            avg_vel2      = pow(avg_vel,2.0);
+            one_over_mdot = 1.0/solver_container[FLOW_SOL]->GetOneD_MassFlowRate();
+            /* Some repeated terms */
+            dvdr = 0.5/avg_vel*one_over_mdot*Vn*(pow(Vn,2.0) - avg_vel2);
+            a1   = Gamma/Gamma_Minus_One/(pow(avg_enthalpy-0.5*avg_vel2,2.0));
+            a2   = 0.5/avg_vel*(3.0*pow(Vn,2.0) - avg_vel2)*Density*one_over_mdot;
+            /* dj / drho */
+            dobj_dV[0] =   config->GetCoeff_ObjChainRule(0)*
+                Gamma/Gamma_Minus_One/(avg_enthalpy-0.5*avg_vel2)*(Density/Area_Monitored/Pressure); // drho avg/ d P avg * dPavg dr
+            dobj_dV[0] +=   config->GetCoeff_ObjChainRule(0)*
+                (-avg_pressure*a1*one_over_mdot*Vn)*
+                (0.5*Velocity2 - avg_enthalpy+Gamma/(Gamma_Minus_One)*Density/Pressure );//drho avg/ dh avg * dhavg /dr
+            dobj_dV[0] +=  config->GetCoeff_ObjChainRule(0)*
+                ( avg_pressure*a1*avg_vel * dvdr); // drho avg/ dV avg * dV avg/dr
+            dobj_dV[0] +=  config->GetCoeff_ObjChainRule(1)*dvdr;
+            /* dj / d\vec{v} */
+            for (iDim = 0; iDim<nDim; iDim++){
+              dobj_dV[iDim+1] = config->GetCoeff_ObjChainRule(0)*
+                  UnitNormal[iDim]*( avg_vel*avg_pressure*a1)* a2;
+              dobj_dV[iDim+1] +=config->GetCoeff_ObjChainRule(0)*
+                  (-avg_pressure*a1*one_over_mdot)*(
+                      (Pressure*Gamma/Gamma_Minus_One + 0.5*avg_vel2*Density- avg_enthalpy*Density)*UnitNormal[iDim]+
+                      Velocity[iDim]*Vn*Density);
+              dobj_dV[iDim+1] += config->GetCoeff_ObjChainRule(1)*
+                  UnitNormal[iDim]*a2;
+            }
+            /* dj / d P */
+            dobj_dV[4] =  config->GetCoeff_ObjChainRule(0)*(Gamma/Gamma_Minus_One/(avg_enthalpy-0.5*avg_vel2) * (1.0/Area_Monitored));
+            dobj_dV[4] += config->GetCoeff_ObjChainRule(0)*(-avg_pressure*a1*Vn*one_over_mdot*Gamma/Gamma_Minus_One);
+            dobj_dV[4] += config->GetCoeff_ObjChainRule(4)/Area_Monitored;
+            break;
+          case ONED_MFLUX:
+            avg_density   = solver_container[FLOW_SOL]->GetOneD_AvgDensity();
+            avg_pressure  = solver_container[FLOW_SOL]->GetOneD_AvgPress();
+            avg_vel       = solver_container[FLOW_SOL]->GetOneD_AvgVelocity();
+            avg_vel2      = pow(avg_vel,2.0);
+            one_over_mdot = 1.0/solver_container[FLOW_SOL]->GetOneD_MassFlowRate();
+            /* Some repeated terms */
+            a1 = Vn*one_over_mdot; /*-- d (mdot) / drho --*/
+            /* dj / drho */
+            dobj_dV[0] = config->GetCoeff_ObjChainRule(0)*(2.0*Density - avg_density)*a1;
+            dobj_dV[0] += config->GetCoeff_ObjChainRule(1)*0.5/avg_vel*(pow(Vn,2.0) - avg_vel2)*a1;
+            dobj_dV[0] += config->GetCoeff_ObjChainRule(4)*(Pressure - avg_pressure)*a1;
+            /* dj / d\vec{v} */
+            for (iDim = 0; iDim<nDim; iDim++){
+              a1 = Density*UnitNormal[iDim]*one_over_mdot;/*-- d (mdot) / V[i] --*/
+              dobj_dV[iDim+1] = config->GetCoeff_ObjChainRule(0)*(Density - avg_density)*a1;
+              dobj_dV[iDim+1] += config->GetCoeff_ObjChainRule(1)*0.5/avg_vel*(3.0*pow(Vn,2.0)-avg_vel2)*a1;
+              dobj_dV[iDim+1] += config->GetCoeff_ObjChainRule(4)*(Pressure - avg_pressure )*a1;
+            }
+            /* dj / d P */
+            dobj_dV[4] =  config->GetCoeff_ObjChainRule(4)*(Density*Vn*one_over_mdot);
+            break;
+          default:
+            break;
+          }
+        }
 
-      /*--- Set Adjoint variables to 0 initially ---*/
-      for (iVar = 0; iVar < nVar; iVar++) {
-        Psi_outlet[iVar] = 0.0;
-      }
+
+        /*--- Set Adjoint variables to 0 initially ---*/
+        for (iVar = 0; iVar < nVar; iVar++) {
+          Psi_outlet[iVar] = 0.0;
+        }
 
         if (Vn > SoundSpeed) {
           /*--- Objective-dependent additions to energy term ---*/
@@ -5217,9 +5316,9 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           switch (config->GetKind_ObjFunc(iMarker_Monitoring)) {
           case OUTFLOW_GENERALIZED:
             velocity_gradient = 0.0;
-            for (iDim=0; iDim<nDim; iDim++) velocity_gradient += UnitNormal[iDim]*config->GetCoeff_ObjChainRule(iDim+1);
-            density_gradient = config->GetCoeff_ObjChainRule(0);
-            pressure_gradient = config->GetCoeff_ObjChainRule(4);
+            for (iDim=0; iDim<nDim; iDim++) velocity_gradient += UnitNormal[iDim]*dobj_dV[iDim+1];
+            density_gradient = dobj_dV[0];
+            pressure_gradient = dobj_dV[4];
             Psi_outlet[nDim+1]+=Weight_ObjFunc*(a1*(density_gradient/Vn_rel+pressure_gradient*Vn_rel-velocity_gradient/Density));
             break;
           case AVG_TOTAL_PRESSURE:
@@ -5302,15 +5401,15 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
         Psi_outlet[0]+=Weight_ObjFunc;
         break;
       case OUTFLOW_GENERALIZED:
-        density_gradient = config->GetCoeff_ObjChainRule(0);
-        pressure_gradient = config->GetCoeff_ObjChainRule(4);
+        density_gradient = dobj_dV[0];
+        pressure_gradient = dobj_dV[4];
         velocity_gradient = 0.0;    /*Inside the option, this term is $\vec{v} \cdot \frac{dg}{d\vec{v}}$ */
         for (iDim=0; iDim<nDim; iDim++)
-          velocity_gradient += Velocity[iDim]*config->GetCoeff_ObjChainRule(iDim+1);
+          velocity_gradient += Velocity[iDim]*dobj_dV[iDim+1];
         /*Pressure-fixed version*/
         Psi_outlet[0]+=Weight_ObjFunc*(density_gradient*2.0/Vn_Exit-velocity_gradient/Density/Vn_Exit);
         for (iDim=0; iDim<nDim; iDim++) {
-          Psi_outlet[iDim+1]+=Weight_ObjFunc*(config->GetCoeff_ObjChainRule(iDim+1)/Density/Vn_Exit-UnitNormal[iDim]*density_gradient/Vn_Exit/Vn_Exit);
+          Psi_outlet[iDim+1]+=Weight_ObjFunc*(dobj_dV[iDim+1]/Density/Vn_Exit-UnitNormal[iDim]*density_gradient/Vn_Exit/Vn_Exit);
 
         }
         break;
@@ -6297,10 +6396,11 @@ CAdjNSSolver::CAdjNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
          ObjFunc = config->GetKind_ObjFunc(iMarker_Monitoring);
          if ((ObjFunc == INVERSE_DESIGN_HEATFLUX) ||
              (ObjFunc == TOTAL_HEATFLUX) || (ObjFunc == MAXIMUM_HEATFLUX) ||
-             (ObjFunc == MASS_FLOW_RATE) ) factor = 1.0;
+             (ObjFunc == MASS_FLOW_RATE) || (ObjFunc == OUTFLOW_GENERALIZED))
+           factor = 1.0;
 
-        if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE) ||
-            (ObjFunc == OUTFLOW_GENERALIZED)) factor = 1.0/Area_Monitored;
+        if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE))
+          factor = 1.0/Area_Monitored;
 
         Weight_ObjFunc = Weight_ObjFunc*factor;
         config->SetWeight_ObjFunc(iMarker_Monitoring, Weight_ObjFunc);
@@ -6667,11 +6767,11 @@ void CAdjNSSolver::Viscous_Sensitivity(CGeometry *geometry, CSolver **solver_con
 
     if ((ObjFunc == INVERSE_DESIGN_HEATFLUX) ||
         (ObjFunc == TOTAL_HEATFLUX) || (ObjFunc == MAXIMUM_HEATFLUX) ||
-        (ObjFunc == MASS_FLOW_RATE))
+        (ObjFunc == MASS_FLOW_RATE) || (ObjFunc == OUTFLOW_GENERALIZED))
       factor = 1.0;
 
-    if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE) ||
-        (ObjFunc == OUTFLOW_GENERALIZED)) factor = 1.0/Area_Monitored;
+    if ((ObjFunc == AVG_TOTAL_PRESSURE) || (ObjFunc == AVG_OUTLET_PRESSURE))
+      factor = 1.0/Area_Monitored;
 
   }
 

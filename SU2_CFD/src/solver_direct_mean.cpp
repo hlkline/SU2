@@ -10048,7 +10048,7 @@ void CEulerSolver::Compute_ComboObj(CConfig *config) {
       Total_ComboObj+=Weight_ObjFunc*OneD_TotalPress;
       break;
     case AVG_OUTLET_PRESSURE:
-      Total_ComboObj+=Weight_ObjFunc*OneD_PressureRef;
+      Total_ComboObj+=Weight_ObjFunc*OneD_Pressure1D;
       break;
     case MASS_FLOW_RATE:
       Total_ComboObj+=Weight_ObjFunc*OneD_MassFlowRate;
@@ -13386,7 +13386,7 @@ void CEulerSolver::BC_ActDisk(CGeometry *geometry, CSolver **solver_container, C
                 if (inlet_surface) {
 
                     /*--- Build the fictitious intlet state based on characteristics.
-         Retrieve the specified back pressure for this inlet ---*/
+                     Retrieve the specified back pressure for this inlet ---*/
 
                     Density = V_domain[nDim+2];
                     Velocity2 = 0.0; Vn = 0.0;
