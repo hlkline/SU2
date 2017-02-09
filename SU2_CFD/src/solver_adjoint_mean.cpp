@@ -5109,9 +5109,9 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
   bool implicit = (config->GetKind_TimeIntScheme_AdjFlow() == EULER_IMPLICIT);
   bool grid_movement  = config->GetGrid_Movement();
   /*---Local flow quantities---*/
-  su2double Pressure=0.0, P_Exit=0.0,  Velocity2 = 0.0, Area=0.0, Density=0.0, Height=0.0,
-      Vn = 0.0, SoundSpeed = 0.0,  LevelSet=0.0, Vn_Exit=0.0, ProjGridVel = 0.0,
-      Riemann=0.0, Entropy=0.0, Density_Outlet = 0.0, Vn_rel=0.0;
+  su2double Pressure=0.0, P_Exit=0.0,  Velocity2 = 0.0, Area=0.0, Density=0.0,
+      Vn = 0.0, SoundSpeed = 0.0,  Vn_Exit=0.0, ProjGridVel = 0.0,
+      Riemann=0.0, Entropy=0.0, Vn_rel=0.0;
   su2double Velocity[3]={0.0,0.0,0.0}, UnitNormal[3]={0.0,0.0,0.0};
   su2double avg_enthalpy  = 0.0, avg_pressure  = 0.0,one_over_mdot = 0.0, avg_vel = 0.0, avg_vel2  = 0.0,
       avg_density=0.0;
@@ -5121,11 +5121,6 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
   su2double a1=0.0, a2=0.0, dvdr=0.0;
   su2double density_gradient=0.0, pressure_gradient=0.0, velocity_gradient=0.0;
   /*--- ---*/
-  su2double FreeSurface_Zero = config->GetFreeSurface_Zero();
-  su2double PressFreeSurface = solver_container[FLOW_SOL]->GetPressure_Inf();
-  su2double epsilon          = config->GetFreeSurface_Thickness();
-  su2double RatioDensity     = config->GetRatioDensity();
-  su2double Froude           = config->GetFroude();
   su2double Weight_ObjFunc = 1.0;
   /*--- partial derivative of the objective kernal wrt local primitive variables ---*/
   su2double dobj_dV[5] = {0.0,0.0,0.0,0.0,0.0};
