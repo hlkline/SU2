@@ -240,18 +240,41 @@ def obj_f(dvs,config,state=None):
         if def_objs[this_obj]['CTYPE']=='NONE':
             func += su2func(this_obj,config,state) * sign * scale
         else:
-            value = su2func(this_obj,config,state)
-            valuec = float(def_objs[this_obj]['CVAL'])                   
-            if (def_objs[this_obj]['CTYPE']=='=' or \
-                (def_objs[this_obj]['CTYPE']=='>' and value < valuec) or \
-                (def_objs[this_obj]['CTYPE']=='<' and value > valuec )):
-                func +=scale*(valuec - value)**2.0
+            func += obj_p(config,state,this_obj,def_objs,scale)
     vals_out.append(func)
     #: for each objective
     
     return vals_out
 
 #: def obj_f()
+        
+def obj_p(config,state,this_obj,def_objs,scale):
+    # Penalty function: square of the difference between value and limit
+    value = su2func(this_obj,config,state)
+    valuec = float(def_objs[this_obj]['CVAL'])
+    penalty = 0.0                   
+    if (def_objs[this_obj]['CTYPE']=='=' or \
+        (def_objs[this_obj]['CTYPE']=='>' and value < valuec) or \
+        (def_objs[this_obj]['CTYPE']=='<' and value > valuec )):
+        penalty = scale*(valuec - value)**2.0
+    return penalty
+#: def obj_p()
+
+def obj_dp(config,state,this_obj,def_objs,scale):
+    # Partial Derivative of Penalty function: square of the difference between value and limit
+    # If penalty constraint active, set value:
+    value = su2func(this_obj,config,state)
+    valuec = float(def_objs[this_obj]['CVAL'])
+    # For inequality constraints, if inactive set scale to 0.0
+    dpenalty = 0.0
+    if ((def_objs[this_obj]['CTYPE']=='>' and value < valuec)  or\
+         (def_objs[this_obj]['CTYPE']=='<' and value > valuec )):
+        dpenalty=2.0*abs(valuec - value)
+    elif (def_objs[this_obj]['CTYPE']=='='):
+        depenalty=2.0*(value -valuec)
+
+    return dpenalty
+#: def obj_dp()
 
 def obj_df(dvs,config,state=None):
     """ vals = SU2.eval.obj_df(dvs,config,state=None)
@@ -291,18 +314,8 @@ def obj_df(dvs,config,state=None):
                 sign = su2io.get_objectiveSign(this_obj)
                 scale[i_obj]*=sign
             else:
-                # If penalty constraint active, set value:
-                value = su2func(this_obj,config,state)
-                valuec = float(def_objs[this_obj]['CVAL'])
-                if ((def_objs[this_obj]['CTYPE']=='>' and value < valuec)  or\
-                     (def_objs[this_obj]['CTYPE']=='<' and value > valuec )):
-                    scale[i_obj]*=2.0*abs(valuec - value)
-                elif (def_objs[this_obj]['CTYPE']=='='):
-                    scale[i_obj]*=2.0*(value -valuec)
-                # For inequality constraints, if inactive set scale to 0.0
-                if ((def_objs[this_obj]['CTYPE']=='>' and value > valuec) or\
-                    (def_objs[this_obj]['CTYPE']=='<' and value < valuec )):
-                    scale[i_obj] = 0.0
+                scale[i_obj]*=obj_dp(config, state, this_obj, def_objs, scale)
+
  
             
         config['OBJECTIVE_WEIGHT']=','.join(map(str,scale))

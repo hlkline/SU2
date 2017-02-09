@@ -111,22 +111,8 @@ def function( func_name, config, state=None ):
         func_out = state['FUNCTIONS']
     elif (multi_objective):
         # If combine_objective is true, use the 'combo' output.
-        objectives=config.OPT_OBJECTIVE
-        func_out = 0.0
-        for func in func_name:
-            sign = su2io.get_objectiveSign(func)
-            # Evaluate Objective Function
-            # scaling and sign
-            if objectives[func]['CTYPE']=='NONE':
-                func_out+=state['FUNCTIONS'][func]*objectives[func]['SCALE']*sign
-            else:
-                value = float(state['FUNCTIONS'][func])
-                valuec = float(objectives[func]['CVAL'])                   
-                if (objectives[func]['CTYPE']=='=' or \
-                    (objectives[func]['CTYPE']=='>' and value < valuec) or \
-                    (objectives[func]['CTYPE']=='<' and value > valuec )):
-                    func_out +=objectives[func]['SCALE']*(valuec - value)**2.0
-                
+        # obj_f defined in design
+        func_out = obj_f(dvs,config,state):
         state['FUNCTIONS']['COMBO'] = func_out
     else:
         func_out = state['FUNCTIONS'][func_name]
