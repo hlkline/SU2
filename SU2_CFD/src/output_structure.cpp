@@ -3964,16 +3964,12 @@ void COutput::SetConvHistory_Header(ofstream *ConvHist_file, CConfig *config) {
   bool output_massflow = (config->GetKind_ObjFunc() == MASS_FLOW_RATE);
   bool output_comboObj = (config->GetnObj() > 1);
   bool output_per_surface = false;
-  //if ((config->GetnMarker_Monitoring() > 1) && (!output_comboObj)) output_per_surface = true;
+  if (config->GetnMarker_Monitoring() > 1) output_per_surface = true;
   
   unsigned short direct_diff = config->GetDirectDiff();
 
-  bool thermal = false; /* Flag for whether to print heat flux values */
-
-  if (config->GetKind_Solver() == RANS or config->GetKind_Solver()  == NAVIER_STOKES) {
-    thermal = true;
-  }
-
+  /* Flag for whether to print heat flux values */
+  bool thermal = (config->GetKind_Solver() == RANS or config->GetKind_Solver()  == NAVIER_STOKES);
   
   /*--- Write file name with extension ---*/
   
@@ -4143,7 +4139,7 @@ void COutput::SetConvHistory_Body(ofstream *ConvHist_file,
   bool output_massflow = (config[val_iZone]->GetKind_ObjFunc() == MASS_FLOW_RATE);
   bool output_comboObj = (config[val_iZone]->GetnObj() > 1);
   unsigned short FinestMesh = config[val_iZone]->GetFinestMesh();
-  
+
   int rank;
 #ifdef HAVE_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -4240,7 +4236,7 @@ void COutput::SetConvHistory_Body(ofstream *ConvHist_file,
     string inMarker_Tag, outMarker_Tag;
     
     bool output_per_surface = false;
- //   if ((config[val_iZone]->GetnMarker_Monitoring() > 1) && (config[val_iZone]->GetnObj() <= 1)) output_per_surface = true;
+    if (config[val_iZone]->GetnMarker_Monitoring() > 1) output_per_surface = true;
 
     
     unsigned short direct_diff = config[val_iZone]->GetDirectDiff();

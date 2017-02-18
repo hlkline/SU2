@@ -5360,15 +5360,6 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
           Velocity2 += Velocity[iDim]*Velocity[iDim];
         }
 
-        /*--- Extra boundary term for grid movement ---*/
-
-        if (grid_movement) {
-          ProjGridVel = 0.0;
-          su2double *GridVel = geometry->node[iPoint]->GetGridVel();
-          for (iDim = 0; iDim < nDim; iDim++)
-            ProjGridVel += GridVel[iDim]*UnitNormal[iDim];
-        }
-
         /*--- Impose values for PsiRho & Phi using PsiE from domain. ---*/
 
         Psi_outlet[nVar-1] = Psi_domain[nVar-1];
@@ -5398,7 +5389,7 @@ void CAdjEulerSolver::BC_Outlet(CGeometry *geometry, CSolver **solver_container,
       case OUTFLOW_GENERALIZED:
         density_gradient = dobj_dV[0];
         pressure_gradient = dobj_dV[4];
-        velocity_gradient = 0.0;    /*Inside the option, this term is $\vec{v} \cdot \frac{dg}{d\vec{v}}$ */
+        velocity_gradient = 0.0;    /*Inside this option, this term is $\vec{v} \cdot \frac{dg}{d\vec{v}}$ */
         for (iDim=0; iDim<nDim; iDim++)
           velocity_gradient += Velocity[iDim]*dobj_dV[iDim+1];
         /*Pressure-fixed version*/

@@ -9969,7 +9969,6 @@ void CEulerSolver::SetFarfield_AoA(CGeometry *geometry, CSolver **solver_contain
 void CEulerSolver::Compute_ComboObj(CConfig *config) {
   unsigned short iMarker_Monitoring;
   su2double Weight_ObjFunc;
-
   /*--- Loop over all monitored markers, add to the 'combo' objective ---*/
   for (iMarker_Monitoring = 0; iMarker_Monitoring < config->GetnMarker_Monitoring(); iMarker_Monitoring++) {
     Weight_ObjFunc = config->GetWeight_ObjFunc(iMarker_Monitoring);
@@ -13290,432 +13289,432 @@ void CEulerSolver::BC_ActDisk_Outlet(CGeometry *geometry, CSolver **solver_conta
 void CEulerSolver::BC_ActDisk(CGeometry *geometry, CSolver **solver_container, CNumerics *conv_numerics, CNumerics *visc_numerics,
         CConfig *config, unsigned short val_marker, bool inlet_surface) {
 
-    unsigned short iDim, iVar, jVar, jDim;
-    unsigned long iVertex, iPoint, iPoint_Normal, GlobalIndex_donor, GlobalIndex;
-    su2double Pressure, Velocity[3], Target_Press_Jump, Target_Temp_Jump,
-    Velocity2, Entropy, Density, Energy, Riemann, Vn, SoundSpeed, Vn_Inlet, Mach_Outlet,
-    Area, UnitNormal[3], *V_outlet, *V_domain, *V_inlet, P_Total, T_Total, H_Total, Temperature,
-    Mach2, SoundSpeed2, SoundSpeed_Total2, Vel_Mag, alpha, aa, bb, cc, dd;
-    su2double Factor, P_static, T_static, SoS_outlet, Rho_outlet, Rho_inlet;
-    su2double Vel_normal_inlet[3], Vel_tangent_inlet[3], Vel_inlet[3];
-    su2double Vel_normal_outlet[3], Vel_tangent_outlet[3], Vel_outlet[3];
-    su2double Vel_normal_inlet_, Vel_tangent_inlet_, Vel_inlet_;
-    su2double Vel_normal_outlet_, Vel_outlet_;
-    su2double turb_ke, a2, phi;
-    bool ReverseFlow;
+  unsigned short iDim, iVar, jVar, jDim;
+  unsigned long iVertex, iPoint, iPoint_Normal, GlobalIndex_donor, GlobalIndex;
+  su2double Pressure, Velocity[3], Target_Press_Jump, Target_Temp_Jump,
+  Velocity2, Entropy, Density, Energy, Riemann, Vn, SoundSpeed, Vn_Inlet, Mach_Outlet,
+  Area, UnitNormal[3], *V_outlet, *V_domain, *V_inlet, P_Total, T_Total, H_Total, Temperature,
+  Mach2, SoundSpeed2, SoundSpeed_Total2, Vel_Mag, alpha, aa, bb, cc, dd;
+  su2double Factor, P_static, T_static, SoS_outlet, Rho_outlet, Rho_inlet;
+  su2double Vel_normal_inlet[3], Vel_tangent_inlet[3], Vel_inlet[3];
+  su2double Vel_normal_outlet[3], Vel_tangent_outlet[3], Vel_outlet[3];
+  su2double Vel_normal_inlet_, Vel_tangent_inlet_, Vel_inlet_;
+  su2double Vel_normal_outlet_, Vel_outlet_;
+  su2double turb_ke, a2, phi;
+  bool ReverseFlow;
 
-    bool implicit           = (config->GetKind_TimeIntScheme_Flow() == EULER_IMPLICIT);
-    su2double Gas_Constant  = config->GetGas_ConstantND();
-    bool viscous            = config->GetViscous();
-    bool grid_movement      = config->GetGrid_Movement();
-    bool tkeNeeded                = (((config->GetKind_Solver() == RANS )|| (config->GetKind_Solver() == DISC_ADJ_RANS)) &&
-            (config->GetKind_Turb_Model() == SST));
-    bool ratio                = (config->GetActDisk_Jump() == RATIO);
-    su2double SecondaryFlow = config->GetSecondaryFlow_ActDisk();
+  bool implicit           = (config->GetKind_TimeIntScheme_Flow() == EULER_IMPLICIT);
+  su2double Gas_Constant  = config->GetGas_ConstantND();
+  bool viscous            = config->GetViscous();
+  bool grid_movement      = config->GetGrid_Movement();
+  bool tkeNeeded                = (((config->GetKind_Solver() == RANS )|| (config->GetKind_Solver() == DISC_ADJ_RANS)) &&
+          (config->GetKind_Turb_Model() == SST));
+  bool ratio                = (config->GetActDisk_Jump() == RATIO);
+  su2double SecondaryFlow = config->GetSecondaryFlow_ActDisk();
 
-    su2double *Normal = new su2double[nDim];
-    su2double *Flow_Dir = new su2double[nDim];
+  su2double *Normal = new su2double[nDim];
+  su2double *Flow_Dir = new su2double[nDim];
 
-    /*--- Loop over all the vertices on this boundary marker ---*/
+  /*--- Loop over all the vertices on this boundary marker ---*/
 
-    for (iVertex = 0; iVertex < geometry->nVertex[val_marker]; iVertex++) {
+  for (iVertex = 0; iVertex < geometry->nVertex[val_marker]; iVertex++) {
 
-        if (inlet_surface) {
-            V_inlet = GetCharacPrimVar(val_marker, iVertex);
-            V_outlet = GetDonorPrimVar(val_marker, iVertex);
-        }
-        else {
-            V_outlet = GetCharacPrimVar(val_marker, iVertex);
-            V_inlet = GetDonorPrimVar(val_marker, iVertex);
-        }
+      if (inlet_surface) {
+          V_inlet = GetCharacPrimVar(val_marker, iVertex);
+          V_outlet = GetDonorPrimVar(val_marker, iVertex);
+      }
+      else {
+          V_outlet = GetCharacPrimVar(val_marker, iVertex);
+          V_inlet = GetDonorPrimVar(val_marker, iVertex);
+      }
 
-        iPoint = geometry->vertex[val_marker][iVertex]->GetNode();
-        iPoint_Normal = geometry->vertex[val_marker][iVertex]->GetNormal_Neighbor();
-        GlobalIndex = geometry->node[iPoint]->GetGlobalIndex();
-        GlobalIndex_donor = GetDonorGlobalIndex(val_marker, iVertex);
+      iPoint = geometry->vertex[val_marker][iVertex]->GetNode();
+      iPoint_Normal = geometry->vertex[val_marker][iVertex]->GetNormal_Neighbor();
+      GlobalIndex = geometry->node[iPoint]->GetGlobalIndex();
+      GlobalIndex_donor = GetDonorGlobalIndex(val_marker, iVertex);
 
-        /*--- Check if the node belongs to the domain (i.e., not a halo node) ---*/
+      /*--- Check if the node belongs to the domain (i.e., not a halo node) ---*/
 
 //      if ((geometry->node[iPoint]->GetDomain()) &&
 //              (GlobalIndex != GlobalIndex_donor) && (!ActDisk_Perimeter)) {
 
-            if ((geometry->node[iPoint]->GetDomain()) &&
-                    (GlobalIndex != GlobalIndex_donor)) {
+          if ((geometry->node[iPoint]->GetDomain()) &&
+                  (GlobalIndex != GlobalIndex_donor)) {
 
-            /*--- Normal vector for this vertex (negative for outward convention) ---*/
+          /*--- Normal vector for this vertex (negative for outward convention) ---*/
 
-            geometry->vertex[val_marker][iVertex]->GetNormal(Normal);
-            for (iDim = 0; iDim < nDim; iDim++) Normal[iDim] = -Normal[iDim];
-            conv_numerics->SetNormal(Normal);
+          geometry->vertex[val_marker][iVertex]->GetNormal(Normal);
+          for (iDim = 0; iDim < nDim; iDim++) Normal[iDim] = -Normal[iDim];
+          conv_numerics->SetNormal(Normal);
 
-            Area = 0.0;
-            for (iDim = 0; iDim < nDim; iDim++) Area += Normal[iDim]*Normal[iDim];
-            Area = sqrt (Area);
+          Area = 0.0;
+          for (iDim = 0; iDim < nDim; iDim++) Area += Normal[iDim]*Normal[iDim];
+          Area = sqrt (Area);
 
-            for (iDim = 0; iDim < nDim; iDim++)
-                UnitNormal[iDim] = Normal[iDim]/Area;
+          for (iDim = 0; iDim < nDim; iDim++)
+              UnitNormal[iDim] = Normal[iDim]/Area;
 
-            /*--- Current solution at this boundary node and jumps values ---*/
-
-            V_domain = node[iPoint]->GetPrimitive();
-            Target_Press_Jump = GetActDisk_DeltaP(val_marker, iVertex);
-            Target_Temp_Jump = GetActDisk_DeltaT(val_marker, iVertex);
-
-            if (inlet_surface) {
-                if (ratio) { P_static = V_outlet[nDim+1]/Target_Press_Jump; T_static = V_outlet[0]/Target_Temp_Jump; }
-                else { P_static = V_outlet[nDim+1] - Target_Press_Jump; T_static = V_outlet[0] - Target_Temp_Jump; }
-            }
-            else {
-                if (ratio) { P_static = V_inlet[nDim+1]*Target_Press_Jump; T_static = V_inlet[0]*Target_Temp_Jump; }
-                else { P_static = V_inlet[nDim+1] + Target_Press_Jump; T_static = V_inlet[0] + Target_Temp_Jump; }
-            }
-
-            /*--- Check the flow direction. Project the flow into the normal to the inlet face ---*/
-
-            Vn = 0.0; ReverseFlow = false;
-            for (iDim = 0; iDim < nDim; iDim++) {  Vn += V_domain[iDim+1]*UnitNormal[iDim]; }
-            if ((inlet_surface) && (Vn < 0.0)) { ReverseFlow = true; }
-            if ((!inlet_surface) && (Vn > 0.0)) { ReverseFlow = true; }
-
-            /*---Depending of inflow outflow and flow reversal it takes a decision about the BC ---*/
-
-            if (!ReverseFlow) {
-
-                /*--- Subsonic inlet ---*/
-
-                if (inlet_surface) {
-
-                    /*--- Build the fictitious intlet state based on characteristics.
-                     Retrieve the specified back pressure for this inlet ---*/
+          /*--- Current solution at this boundary node and jumps values ---*/
+
+          V_domain = node[iPoint]->GetPrimitive();
+          Target_Press_Jump = GetActDisk_DeltaP(val_marker, iVertex);
+          Target_Temp_Jump = GetActDisk_DeltaT(val_marker, iVertex);
+
+          if (inlet_surface) {
+              if (ratio) { P_static = V_outlet[nDim+1]/Target_Press_Jump; T_static = V_outlet[0]/Target_Temp_Jump; }
+              else { P_static = V_outlet[nDim+1] - Target_Press_Jump; T_static = V_outlet[0] - Target_Temp_Jump; }
+          }
+          else {
+              if (ratio) { P_static = V_inlet[nDim+1]*Target_Press_Jump; T_static = V_inlet[0]*Target_Temp_Jump; }
+              else { P_static = V_inlet[nDim+1] + Target_Press_Jump; T_static = V_inlet[0] + Target_Temp_Jump; }
+          }
+
+          /*--- Check the flow direction. Project the flow into the normal to the inlet face ---*/
+
+          Vn = 0.0; ReverseFlow = false;
+          for (iDim = 0; iDim < nDim; iDim++) {  Vn += V_domain[iDim+1]*UnitNormal[iDim]; }
+          if ((inlet_surface) && (Vn < 0.0)) { ReverseFlow = true; }
+          if ((!inlet_surface) && (Vn > 0.0)) { ReverseFlow = true; }
+
+          /*---Depending of inflow outflow and flow reversal it takes a decision about the BC ---*/
+
+          if (!ReverseFlow) {
+
+              /*--- Subsonic inlet ---*/
+
+              if (inlet_surface) {
+
+                  /*--- Build the fictitious intlet state based on characteristics.
+       Retrieve the specified back pressure for this inlet ---*/
 
-                    Density = V_domain[nDim+2];
-                    Velocity2 = 0.0; Vn = 0.0;
-                    for (iDim = 0; iDim < nDim; iDim++) {
-                        Velocity[iDim] = V_domain[iDim+1];
-                        Velocity2 += Velocity[iDim]*Velocity[iDim];
-                        Vn += Velocity[iDim]*UnitNormal[iDim];
-                    }
-                    Pressure   = V_domain[nDim+1];
-                    SoundSpeed = sqrt(Gamma*Pressure/Density);
-
-                    Entropy = Pressure*pow(1.0/Density, Gamma);
-                    Riemann = Vn + 2.0*SoundSpeed/Gamma_Minus_One;
-
-                    /*--- Compute the new fictious state at the outlet ---*/
-
-                    Pressure   = P_static;
-                    Density    = pow(Pressure/Entropy,1.0/Gamma);
-                    SoundSpeed = sqrt(Gamma*Pressure/Density);
-                    Vn_Inlet    = Riemann - 2.0*SoundSpeed/Gamma_Minus_One;
-
-                    Velocity2  = 0.0;
-                    for (iDim = 0; iDim < nDim; iDim++) {
-                        Velocity[iDim] = Velocity[iDim] + (Vn_Inlet-Vn)*UnitNormal[iDim];
-                        Velocity2 += Velocity[iDim]*Velocity[iDim];
-                    }
-                    Energy = Pressure/(Density*Gamma_Minus_One) + 0.5*Velocity2;
-                    if (tkeNeeded) Energy += GetTke_Inf();
-
-                    /*--- Conservative variables, using the derived quantities ---*/
-
-                    V_inlet[0] = Pressure / ( Gas_Constant * Density);
-                    for (iDim = 0; iDim < nDim; iDim++)
-                        V_inlet[iDim+1] = Velocity[iDim];
-                    V_inlet[nDim+1] = Pressure;
-                    V_inlet[nDim+2] = Density;
-                    V_inlet[nDim+3] = Energy + Pressure/Density;
-                    V_inlet[nDim+4] = SoundSpeed;
-                    conv_numerics->SetPrimitive(V_domain, V_inlet);
+                  Density = V_domain[nDim+2];
+                  Velocity2 = 0.0; Vn = 0.0;
+                  for (iDim = 0; iDim < nDim; iDim++) {
+                      Velocity[iDim] = V_domain[iDim+1];
+                      Velocity2 += Velocity[iDim]*Velocity[iDim];
+                      Vn += Velocity[iDim]*UnitNormal[iDim];
+                  }
+                  Pressure   = V_domain[nDim+1];
+                  SoundSpeed = sqrt(Gamma*Pressure/Density);
+
+                  Entropy = Pressure*pow(1.0/Density, Gamma);
+                  Riemann = Vn + 2.0*SoundSpeed/Gamma_Minus_One;
+
+                  /*--- Compute the new fictious state at the outlet ---*/
+
+                  Pressure   = P_static;
+                  Density    = pow(Pressure/Entropy,1.0/Gamma);
+                  SoundSpeed = sqrt(Gamma*Pressure/Density);
+                  Vn_Inlet    = Riemann - 2.0*SoundSpeed/Gamma_Minus_One;
+
+                  Velocity2  = 0.0;
+                  for (iDim = 0; iDim < nDim; iDim++) {
+                      Velocity[iDim] = Velocity[iDim] + (Vn_Inlet-Vn)*UnitNormal[iDim];
+                      Velocity2 += Velocity[iDim]*Velocity[iDim];
+                  }
+                  Energy = Pressure/(Density*Gamma_Minus_One) + 0.5*Velocity2;
+                  if (tkeNeeded) Energy += GetTke_Inf();
+
+                  /*--- Conservative variables, using the derived quantities ---*/
+
+                  V_inlet[0] = Pressure / ( Gas_Constant * Density);
+                  for (iDim = 0; iDim < nDim; iDim++)
+                      V_inlet[iDim+1] = Velocity[iDim];
+                  V_inlet[nDim+1] = Pressure;
+                  V_inlet[nDim+2] = Density;
+                  V_inlet[nDim+3] = Energy + Pressure/Density;
+                  V_inlet[nDim+4] = SoundSpeed;
+                  conv_numerics->SetPrimitive(V_domain, V_inlet);
 
-                }
-
-                /*--- Subsonic outlet ---*/
+              }
+
+              /*--- Subsonic outlet ---*/
 
-                else {
-
-                    FluidModel->SetTDState_PT(P_static, T_static);
-                    SoS_outlet = FluidModel->GetSoundSpeed();
-                    Rho_outlet = FluidModel->GetDensity();
-
-                    /*--- We use the velocity and the density from the flow inlet
-         to evaluate flow direction and mass flow ---*/
+              else {
+
+                  FluidModel->SetTDState_PT(P_static, T_static);
+                  SoS_outlet = FluidModel->GetSoundSpeed();
+                  Rho_outlet = FluidModel->GetDensity();
+
+                  /*--- We use the velocity and the density from the flow inlet
+       to evaluate flow direction and mass flow ---*/
 
-                    Rho_inlet = V_inlet[nDim+2];
-                    for (iDim = 0; iDim < nDim; iDim++)
-                        Vel_inlet[iDim] = V_inlet[iDim+1];
+                  Rho_inlet = V_inlet[nDim+2];
+                  for (iDim = 0; iDim < nDim; iDim++)
+                      Vel_inlet[iDim] = V_inlet[iDim+1];
 
-                    Vel_normal_inlet_ = 0.0; Vel_inlet_ = 0.0;
-                    for (iDim = 0; iDim < nDim; iDim++) {
-                        Vel_normal_inlet[iDim] = -Vel_inlet[iDim]*UnitNormal[iDim];
-                        Vel_normal_inlet_ += Vel_normal_inlet[iDim]*Vel_normal_inlet[iDim];
-                        Vel_inlet_+= Vel_inlet[iDim]*Vel_inlet[iDim];
-                    }
-                    Vel_inlet_ = sqrt(Vel_inlet_);
-                    Vel_normal_inlet_ = sqrt(Vel_normal_inlet_);
+                  Vel_normal_inlet_ = 0.0; Vel_inlet_ = 0.0;
+                  for (iDim = 0; iDim < nDim; iDim++) {
+                      Vel_normal_inlet[iDim] = -Vel_inlet[iDim]*UnitNormal[iDim];
+                      Vel_normal_inlet_ += Vel_normal_inlet[iDim]*Vel_normal_inlet[iDim];
+                      Vel_inlet_+= Vel_inlet[iDim]*Vel_inlet[iDim];
+                  }
+                  Vel_inlet_ = sqrt(Vel_inlet_);
+                  Vel_normal_inlet_ = sqrt(Vel_normal_inlet_);
 
-                    Vel_tangent_inlet_ = 0.0;
-                    for (iDim = 0; iDim < nDim; iDim++) {
-                        Vel_tangent_inlet[iDim] = Vel_inlet[iDim] - Vel_normal_inlet[iDim];
-                        Vel_tangent_inlet_ += Vel_tangent_inlet[iDim]*Vel_tangent_inlet[iDim];
-                    }
-                    Vel_tangent_inlet_ = sqrt(Vel_tangent_inlet_);
+                  Vel_tangent_inlet_ = 0.0;
+                  for (iDim = 0; iDim < nDim; iDim++) {
+                      Vel_tangent_inlet[iDim] = Vel_inlet[iDim] - Vel_normal_inlet[iDim];
+                      Vel_tangent_inlet_ += Vel_tangent_inlet[iDim]*Vel_tangent_inlet[iDim];
+                  }
+                  Vel_tangent_inlet_ = sqrt(Vel_tangent_inlet_);
 
-                    /*--- Mass flow conservation (normal direction) and
-           no jump in the tangential velocity ---*/
+                  /*--- Mass flow conservation (normal direction) and
+         no jump in the tangential velocity ---*/
 
-                    Vel_normal_outlet_ = (1.0-SecondaryFlow/100.0)*(Rho_inlet*Vel_normal_inlet_)/Rho_outlet;
+                  Vel_normal_outlet_ = (1.0-SecondaryFlow/100.0)*(Rho_inlet*Vel_normal_inlet_)/Rho_outlet;
 
-                    Vel_outlet_ = 0.0;
-                    for (iDim = 0; iDim < nDim; iDim++) {
-                        Vel_normal_outlet[iDim] = -Vel_normal_outlet_*UnitNormal[iDim];
-                        Vel_tangent_outlet[iDim] = Vel_tangent_inlet[iDim];
-                        Vel_outlet[iDim] = Vel_normal_outlet[iDim] + Vel_tangent_outlet[iDim];
-                        Vel_outlet_ += Vel_outlet[iDim]*Vel_outlet[iDim];
-                    }
-                    Vel_outlet_ = sqrt(Vel_outlet_);
+                  Vel_outlet_ = 0.0;
+                  for (iDim = 0; iDim < nDim; iDim++) {
+                      Vel_normal_outlet[iDim] = -Vel_normal_outlet_*UnitNormal[iDim];
+                      Vel_tangent_outlet[iDim] = Vel_tangent_inlet[iDim];
+                      Vel_outlet[iDim] = Vel_normal_outlet[iDim] + Vel_tangent_outlet[iDim];
+                      Vel_outlet_ += Vel_outlet[iDim]*Vel_outlet[iDim];
+                  }
+                  Vel_outlet_ = sqrt(Vel_outlet_);
 
-                    Mach_Outlet = min(Vel_outlet_/SoS_outlet, 1.0);
+                  Mach_Outlet = min(Vel_outlet_/SoS_outlet, 1.0);
 
-                    /*--- Reevaluate the Total Pressure and Total Temperature using the
-             Fan Face Mach number and the static values from the jum condition ---*/
+                  /*--- Reevaluate the Total Pressure and Total Temperature using the
+           Fan Face Mach number and the static values from the jum condition ---*/
 
-                    Factor = 1.0 + 0.5*Mach_Outlet*Mach_Outlet*Gamma_Minus_One;
-                    P_Total = P_static * pow(Factor, Gamma/Gamma_Minus_One);
-                    T_Total = T_static * Factor;
+                  Factor = 1.0 + 0.5*Mach_Outlet*Mach_Outlet*Gamma_Minus_One;
+                  P_Total = P_static * pow(Factor, Gamma/Gamma_Minus_One);
+                  T_Total = T_static * Factor;
 
-                    /*--- Flow direction using the velocity direction at the outlet  ---*/
+                  /*--- Flow direction using the velocity direction at the outlet  ---*/
 
-                    if (Vel_outlet_ != 0.0) {
-                        for (iDim = 0; iDim < nDim; iDim++) Flow_Dir[iDim] = Vel_outlet[iDim]/Vel_outlet_;
-                    }
-                    else {
-                        for (iDim = 0; iDim < nDim; iDim++) Flow_Dir[iDim] = 0.0;
-                    }
+                  if (Vel_outlet_ != 0.0) {
+                      for (iDim = 0; iDim < nDim; iDim++) Flow_Dir[iDim] = Vel_outlet[iDim]/Vel_outlet_;
+                  }
+                  else {
+                      for (iDim = 0; iDim < nDim; iDim++) Flow_Dir[iDim] = 0.0;
+                  }
 
-                    /*--- Store primitives and set some variables for clarity. ---*/
+                  /*--- Store primitives and set some variables for clarity. ---*/
 
-                    Density = V_domain[nDim+2];
-                    Velocity2 = 0.0;
-                    for (iDim = 0; iDim < nDim; iDim++) {
-                        Velocity[iDim] = V_domain[iDim+1];
-                        Velocity2 += Velocity[iDim]*Velocity[iDim];
-                    }
-                    Energy      = V_domain[nDim+3] - V_domain[nDim+1]/V_domain[nDim+2];
-                    Pressure    = V_domain[nDim+1];
-                    H_Total     = (Gamma*Gas_Constant/Gamma_Minus_One)*T_Total;
-                    SoundSpeed2 = Gamma*Pressure/Density;
+                  Density = V_domain[nDim+2];
+                  Velocity2 = 0.0;
+                  for (iDim = 0; iDim < nDim; iDim++) {
+                      Velocity[iDim] = V_domain[iDim+1];
+                      Velocity2 += Velocity[iDim]*Velocity[iDim];
+                  }
+                  Energy      = V_domain[nDim+3] - V_domain[nDim+1]/V_domain[nDim+2];
+                  Pressure    = V_domain[nDim+1];
+                  H_Total     = (Gamma*Gas_Constant/Gamma_Minus_One)*T_Total;
+                  SoundSpeed2 = Gamma*Pressure/Density;
 
-                    /*--- Compute the acoustic Riemann invariant that is extrapolated
-           from the domain interior. ---*/
+                  /*--- Compute the acoustic Riemann invariant that is extrapolated
+         from the domain interior. ---*/
 
-                    Riemann   = 2.0*sqrt(SoundSpeed2)/Gamma_Minus_One;
-                    for (iDim = 0; iDim < nDim; iDim++)
-                        Riemann += Velocity[iDim]*UnitNormal[iDim];
+                  Riemann   = 2.0*sqrt(SoundSpeed2)/Gamma_Minus_One;
+                  for (iDim = 0; iDim < nDim; iDim++)
+                      Riemann += Velocity[iDim]*UnitNormal[iDim];
 
-                    /*--- Total speed of sound ---*/
+                  /*--- Total speed of sound ---*/
 
-                    SoundSpeed_Total2 = Gamma_Minus_One*(H_Total - (Energy + Pressure/Density)+0.5*Velocity2) + SoundSpeed2;
+                  SoundSpeed_Total2 = Gamma_Minus_One*(H_Total - (Energy + Pressure/Density)+0.5*Velocity2) + SoundSpeed2;
 
-                    /*--- Dot product of normal and flow direction. This should
-           be negative due to outward facing boundary normal convention. ---*/
+                  /*--- Dot product of normal and flow direction. This should
+         be negative due to outward facing boundary normal convention. ---*/
 
-                    alpha = 0.0;
-                    for (iDim = 0; iDim < nDim; iDim++)
-                        alpha += UnitNormal[iDim]*Flow_Dir[iDim];
+                  alpha = 0.0;
+                  for (iDim = 0; iDim < nDim; iDim++)
+                      alpha += UnitNormal[iDim]*Flow_Dir[iDim];
 
-                    /*--- Coefficients in the quadratic equation for the velocity ---*/
+                  /*--- Coefficients in the quadratic equation for the velocity ---*/
 
-                    aa =  1.0 + 0.5*Gamma_Minus_One*alpha*alpha;
-                    bb = -1.0*Gamma_Minus_One*alpha*Riemann;
-                    cc =  0.5*Gamma_Minus_One*Riemann*Riemann
-                            -2.0*SoundSpeed_Total2/Gamma_Minus_One;
+                  aa =  1.0 + 0.5*Gamma_Minus_One*alpha*alpha;
+                  bb = -1.0*Gamma_Minus_One*alpha*Riemann;
+                  cc =  0.5*Gamma_Minus_One*Riemann*Riemann
+                          -2.0*SoundSpeed_Total2/Gamma_Minus_One;
 
-                    /*--- Solve quadratic equation for velocity magnitude. Value must
-           be positive, so the choice of root is clear. ---*/
+                  /*--- Solve quadratic equation for velocity magnitude. Value must
+         be positive, so the choice of root is clear. ---*/
 
-                    dd = bb*bb - 4.0*aa*cc;
-                    dd = sqrt(max(0.0, dd));
-                    Vel_Mag   = (-bb + dd)/(2.0*aa);
-                    Vel_Mag   = max(0.0, Vel_Mag);
-                    Velocity2 = Vel_Mag*Vel_Mag;
+                  dd = bb*bb - 4.0*aa*cc;
+                  dd = sqrt(max(0.0, dd));
+                  Vel_Mag   = (-bb + dd)/(2.0*aa);
+                  Vel_Mag   = max(0.0, Vel_Mag);
+                  Velocity2 = Vel_Mag*Vel_Mag;
 
-                    /*--- Compute speed of sound from total speed of sound eqn. ---*/
+                  /*--- Compute speed of sound from total speed of sound eqn. ---*/
 
-                    SoundSpeed2 = SoundSpeed_Total2 - 0.5*Gamma_Minus_One*Velocity2;
+                  SoundSpeed2 = SoundSpeed_Total2 - 0.5*Gamma_Minus_One*Velocity2;
 
-                    /*--- Mach squared (cut between 0-1), use to adapt velocity ---*/
+                  /*--- Mach squared (cut between 0-1), use to adapt velocity ---*/
 
-                    Mach2 = min(1.0, Velocity2/SoundSpeed2);
-                    Velocity2   = Mach2*SoundSpeed2;
-                    Vel_Mag     = sqrt(Velocity2);
-                    SoundSpeed2 = SoundSpeed_Total2 - 0.5*Gamma_Minus_One*Velocity2;
+                  Mach2 = min(1.0, Velocity2/SoundSpeed2);
+                  Velocity2   = Mach2*SoundSpeed2;
+                  Vel_Mag     = sqrt(Velocity2);
+                  SoundSpeed2 = SoundSpeed_Total2 - 0.5*Gamma_Minus_One*Velocity2;
 
-                    /*--- Compute new velocity vector at the exit ---*/
+                  /*--- Compute new velocity vector at the exit ---*/
 
-                    for (iDim = 0; iDim < nDim; iDim++)
-                        Velocity[iDim] = Vel_Mag*Flow_Dir[iDim];
+                  for (iDim = 0; iDim < nDim; iDim++)
+                      Velocity[iDim] = Vel_Mag*Flow_Dir[iDim];
 
-                    /*--- Static temperature from the speed of sound relation ---*/
+                  /*--- Static temperature from the speed of sound relation ---*/
 
-                    Temperature = SoundSpeed2/(Gamma*Gas_Constant);
+                  Temperature = SoundSpeed2/(Gamma*Gas_Constant);
 
-                    /*--- Static pressure using isentropic relation at a point ---*/
+                  /*--- Static pressure using isentropic relation at a point ---*/
 
-                    Pressure = P_Total*pow((Temperature/T_Total), Gamma/Gamma_Minus_One);
+                  Pressure = P_Total*pow((Temperature/T_Total), Gamma/Gamma_Minus_One);
 
-                    /*--- Density at the inlet from the gas law ---*/
+                  /*--- Density at the inlet from the gas law ---*/
 
-                    Density = Pressure/(Gas_Constant*Temperature);
+                  Density = Pressure/(Gas_Constant*Temperature);
 
-                    /*--- Using pressure, density, & velocity, compute the energy ---*/
+                  /*--- Using pressure, density, & velocity, compute the energy ---*/
 
-                    Energy = Pressure/(Density*Gamma_Minus_One) + 0.5*Velocity2;
-                    if (tkeNeeded) Energy += GetTke_Inf();
+                  Energy = Pressure/(Density*Gamma_Minus_One) + 0.5*Velocity2;
+                  if (tkeNeeded) Energy += GetTke_Inf();
 
-                    /*--- Primitive variables, using the derived quantities ---*/
+                  /*--- Primitive variables, using the derived quantities ---*/
 
-                    V_outlet[0] = Temperature;
-                    for (iDim = 0; iDim < nDim; iDim++)
-                        V_outlet[iDim+1] = Velocity[iDim];
-                    V_outlet[nDim+1] = Pressure;
-                    V_outlet[nDim+2] = Density;
-                    V_outlet[nDim+3] = Energy + Pressure/Density;
-                    V_outlet[nDim+4] = sqrt(SoundSpeed2);
-                    conv_numerics->SetPrimitive(V_domain, V_outlet);
+                  V_outlet[0] = Temperature;
+                  for (iDim = 0; iDim < nDim; iDim++)
+                      V_outlet[iDim+1] = Velocity[iDim];
+                  V_outlet[nDim+1] = Pressure;
+                  V_outlet[nDim+2] = Density;
+                  V_outlet[nDim+3] = Energy + Pressure/Density;
+                  V_outlet[nDim+4] = sqrt(SoundSpeed2);
+                  conv_numerics->SetPrimitive(V_domain, V_outlet);
 
-                }
+              }
 
-                /*--- Grid Movement ---*/
+              /*--- Grid Movement ---*/
 
-                if (grid_movement)
-                    conv_numerics->SetGridVel(geometry->node[iPoint]->GetGridVel(), geometry->node[iPoint]->GetGridVel());
+              if (grid_movement)
+                  conv_numerics->SetGridVel(geometry->node[iPoint]->GetGridVel(), geometry->node[iPoint]->GetGridVel());
 
-                /*--- Compute the residual using an upwind scheme ---*/
+              /*--- Compute the residual using an upwind scheme ---*/
 
-                conv_numerics->ComputeResidual(Residual, Jacobian_i, Jacobian_j, config);
+              conv_numerics->ComputeResidual(Residual, Jacobian_i, Jacobian_j, config);
 
-                /*--- Update residual value ---*/
+              /*--- Update residual value ---*/
 
-                LinSysRes.AddBlock(iPoint, Residual);
+              LinSysRes.AddBlock(iPoint, Residual);
 
-                /*--- Jacobian contribution for implicit integration ---*/
+              /*--- Jacobian contribution for implicit integration ---*/
 
-                if (implicit) Jacobian.AddBlock(iPoint, iPoint, Jacobian_i);
+              if (implicit) Jacobian.AddBlock(iPoint, iPoint, Jacobian_i);
 
-                /*--- Viscous contribution ---*/
+              /*--- Viscous contribution ---*/
 
-                if (viscous) {
+              if (viscous) {
 
-                    /*--- Set laminar and eddy viscosity at the infinity ---*/
+                  /*--- Set laminar and eddy viscosity at the infinity ---*/
 
-                    if (inlet_surface) {
-                        V_inlet[nDim+5] = node[iPoint]->GetLaminarViscosity();
-                        V_inlet[nDim+6] = node[iPoint]->GetEddyViscosity();
-                    }
-                    else {
-                        V_outlet[nDim+5] = node[iPoint]->GetLaminarViscosity();
-                        V_outlet[nDim+6] = node[iPoint]->GetEddyViscosity();
-                    }
+                  if (inlet_surface) {
+                      V_inlet[nDim+5] = node[iPoint]->GetLaminarViscosity();
+                      V_inlet[nDim+6] = node[iPoint]->GetEddyViscosity();
+                  }
+                  else {
+                      V_outlet[nDim+5] = node[iPoint]->GetLaminarViscosity();
+                      V_outlet[nDim+6] = node[iPoint]->GetEddyViscosity();
+                  }
 
-                    /*--- Set the normal vector and the coordinates ---*/
+                  /*--- Set the normal vector and the coordinates ---*/
 
-                    visc_numerics->SetNormal(Normal);
-                    visc_numerics->SetCoord(geometry->node[iPoint]->GetCoord(), geometry->node[iPoint_Normal]->GetCoord());
+                  visc_numerics->SetNormal(Normal);
+                  visc_numerics->SetCoord(geometry->node[iPoint]->GetCoord(), geometry->node[iPoint_Normal]->GetCoord());
 
-                    /*--- Primitive variables, and gradient ---*/
+                  /*--- Primitive variables, and gradient ---*/
 
-                    if (inlet_surface) visc_numerics->SetPrimitive(V_domain, V_inlet);
-                    else visc_numerics->SetPrimitive(V_domain, V_outlet);
+                  if (inlet_surface) visc_numerics->SetPrimitive(V_domain, V_inlet);
+                  else visc_numerics->SetPrimitive(V_domain, V_outlet);
 
-                    visc_numerics->SetPrimVarGradient(node[iPoint]->GetGradient_Primitive(), node[iPoint]->GetGradient_Primitive());
+                  visc_numerics->SetPrimVarGradient(node[iPoint]->GetGradient_Primitive(), node[iPoint]->GetGradient_Primitive());
 
-                    /*--- Turbulent kinetic energy ---*/
+                  /*--- Turbulent kinetic energy ---*/
 
-                    if (config->GetKind_Turb_Model() == SST)
-                        visc_numerics->SetTurbKineticEnergy(solver_container[TURB_SOL]->node[iPoint]->GetSolution(0), solver_container[TURB_SOL]->node[iPoint]->GetSolution(0));
+                  if (config->GetKind_Turb_Model() == SST)
+                      visc_numerics->SetTurbKineticEnergy(solver_container[TURB_SOL]->node[iPoint]->GetSolution(0), solver_container[TURB_SOL]->node[iPoint]->GetSolution(0));
 
-                    /*--- Compute and update residual ---*/
+                  /*--- Compute and update residual ---*/
 
-                    visc_numerics->ComputeResidual(Residual, Jacobian_i, Jacobian_j, config);
-                    LinSysRes.SubtractBlock(iPoint, Residual);
+                  visc_numerics->ComputeResidual(Residual, Jacobian_i, Jacobian_j, config);
+                  LinSysRes.SubtractBlock(iPoint, Residual);
 
-                    /*--- Jacobian contribution for implicit integration ---*/
+                  /*--- Jacobian contribution for implicit integration ---*/
 
-                    if (implicit) Jacobian.SubtractBlock(iPoint, iPoint, Jacobian_i);
+                  if (implicit) Jacobian.SubtractBlock(iPoint, iPoint, Jacobian_i);
 
-                }
+              }
 
-            }
+          }
 
-            /*--- If reverse flow, then we apply Euler standart boundary
-       condition (no viscous term) ---*/
+          /*--- If reverse flow, then we apply Euler standart boundary
+     condition (no viscous term) ---*/
 
-            if (ReverseFlow) {
+          if (ReverseFlow) {
 
-                /*--- Set the value of the charactestisc variables... important for turbulence model ---*/
+              /*--- Set the value of the charactestisc variables... important for turbulence model ---*/
 
-                for (iVar = 0; iVar < nPrimVar; iVar++) {
-                    if (inlet_surface) { V_inlet[iVar] = V_domain[iVar];    }
-                    else { V_outlet[iVar] = V_domain[iVar]; }
-                }
+              for (iVar = 0; iVar < nPrimVar; iVar++) {
+                  if (inlet_surface) { V_inlet[iVar] = V_domain[iVar];    }
+                  else { V_outlet[iVar] = V_domain[iVar]; }
+              }
 
-                /*--- Get the pressure ---*/
+              /*--- Get the pressure ---*/
 
-                Pressure = node[iPoint]->GetPressure();
+              Pressure = node[iPoint]->GetPressure();
 
-                /*--- Add the kinetic energy correction ---*/
+              /*--- Add the kinetic energy correction ---*/
 
-                if (tkeNeeded) {
-                    turb_ke = solver_container[TURB_SOL]->node[iPoint]->GetSolution(0);
-                    Pressure += (2.0/3.0)*node[iPoint]->GetDensity()*turb_ke;
-                }
+              if (tkeNeeded) {
+                  turb_ke = solver_container[TURB_SOL]->node[iPoint]->GetSolution(0);
+                  Pressure += (2.0/3.0)*node[iPoint]->GetDensity()*turb_ke;
+              }
 
-                /*--- Compute the residual ---*/
+              /*--- Compute the residual ---*/
 
-                Residual[0] = 0.0;
-                for (iDim = 0; iDim < nDim; iDim++)
-                    Residual[iDim+1] = Pressure*UnitNormal[iDim]*Area;
+              Residual[0] = 0.0;
+              for (iDim = 0; iDim < nDim; iDim++)
+                  Residual[iDim+1] = Pressure*UnitNormal[iDim]*Area;
 
-                /*--- Add value to the residual ---*/
+              /*--- Add value to the residual ---*/
 
-                LinSysRes.AddBlock(iPoint, Residual);
+              LinSysRes.AddBlock(iPoint, Residual);
 
-                /*--- Form Jacobians for implicit computations ---*/
+              /*--- Form Jacobians for implicit computations ---*/
 
-                if (implicit) {
+              if (implicit) {
 
-                    for (iVar = 0; iVar < nVar; iVar++) {
-                        for (jVar = 0; jVar < nVar; jVar++)
-                            Jacobian_i[iVar][jVar] = 0.0;
-                    }
+                  for (iVar = 0; iVar < nVar; iVar++) {
+                      for (jVar = 0; jVar < nVar; jVar++)
+                          Jacobian_i[iVar][jVar] = 0.0;
+                  }
 
-                    a2 = Gamma-1.0;
-                    phi = 0.5*a2*node[iPoint]->GetVelocity2();
-                    for (iVar = 0; iVar < nVar; iVar++) {
-                        Jacobian_i[0][iVar] = 0.0;
-                        Jacobian_i[nDim+1][iVar] = 0.0;
-                    }
-                    for (iDim = 0; iDim < nDim; iDim++) {
-                        Jacobian_i[iDim+1][0] = -phi*Normal[iDim];
-                        for (jDim = 0; jDim < nDim; jDim++)
-                            Jacobian_i[iDim+1][jDim+1] = a2*node[iPoint]->GetVelocity(jDim)*Normal[iDim];
-                        Jacobian_i[iDim+1][nDim+1] = -a2*Normal[iDim];
-                    }
+                  a2 = Gamma-1.0;
+                  phi = 0.5*a2*node[iPoint]->GetVelocity2();
+                  for (iVar = 0; iVar < nVar; iVar++) {
+                      Jacobian_i[0][iVar] = 0.0;
+                      Jacobian_i[nDim+1][iVar] = 0.0;
+                  }
+                  for (iDim = 0; iDim < nDim; iDim++) {
+                      Jacobian_i[iDim+1][0] = -phi*Normal[iDim];
+                      for (jDim = 0; jDim < nDim; jDim++)
+                          Jacobian_i[iDim+1][jDim+1] = a2*node[iPoint]->GetVelocity(jDim)*Normal[iDim];
+                      Jacobian_i[iDim+1][nDim+1] = -a2*Normal[iDim];
+                  }
 
-                    Jacobian.AddBlock(iPoint,iPoint,Jacobian_i);
+                  Jacobian.AddBlock(iPoint,iPoint,Jacobian_i);
 
-                }
+              }
 
-            }
+          }
 
-        }
+      }
 
-    }
+  }
 
-    /*--- Free locally allocated memory ---*/
+  /*--- Free locally allocated memory ---*/
 
-    delete [] Normal;
-    delete [] Flow_Dir;
+  delete [] Normal;
+  delete [] Flow_Dir;
 
 }
 

@@ -225,8 +225,9 @@ def obj_f(dvs,config,state=None):
     state = su2io.State(state)
     
     def_objs = config['OPT_OBJECTIVE']
-    objectives = def_objs.keys()
     
+    objectives = def_objs.keys()
+
 #    if objectives: print('Evaluate Objectives')
     # evaluate each objective
     vals_out = []
@@ -234,7 +235,6 @@ def obj_f(dvs,config,state=None):
     for i_obj,this_obj in enumerate(objectives):
         scale = def_objs[this_obj]['SCALE']
         sign  = su2io.get_objectiveSign(this_obj)
-        
         # Evaluate Objective Function
         # scaling and sign
         if def_objs[this_obj]['CTYPE']=='NONE':
@@ -243,7 +243,10 @@ def obj_f(dvs,config,state=None):
             func += obj_p(config,state,this_obj,def_objs,scale)
     vals_out.append(func)
     #: for each objective
-    
+        
+    if state.FUNCTIONS.has_key('COMBO'):
+        state['FUNCTIONS']['COMBO'] = func
+        
     return vals_out
 
 #: def obj_f()
@@ -257,6 +260,7 @@ def obj_p(config,state,this_obj,def_objs,scale):
         (def_objs[this_obj]['CTYPE']=='>' and value < valuec) or \
         (def_objs[this_obj]['CTYPE']=='<' and value > valuec )):
         penalty = scale*(valuec - value)**2.0
+        
     return penalty
 #: def obj_p()
 
@@ -296,6 +300,7 @@ def obj_df(dvs,config,state=None):
     
     def_objs = config['OPT_OBJECTIVE']
     objectives = def_objs.keys()
+    
     n_obj = len( objectives )
     multi_objective = (config['OPT_COMBINE_OBJECTIVE']=="YES")
      

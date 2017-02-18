@@ -94,7 +94,6 @@ def gradient( func_name, method, config, state=None ):
 
         # Adjoint Gradients
         if any([method == 'CONTINUOUS_ADJOINT', method == 'DISCRETE_ADJOINT']):
-
             # If using chain rule
             if 'OUTFLOW_GENERALIZED' in ', '.join(func_name):
                 import downstream_function

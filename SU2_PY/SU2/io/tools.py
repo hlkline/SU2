@@ -175,13 +175,7 @@ def read_history( History_filename ):
 # -------------------------------------------------------------------
 #  Define Dictionary Map for Header Names
 # -------------------------------------------------------------------
-
-def get_headerMap():
-    """ returns a dictionary that maps history file header names
-        to optimization problem function names
-    """
-    # header name to config file name map
-    map_dict = { "Iteration"       : "ITERATION"               ,
+history_header_map = { "Iteration"       : "ITERATION"               ,
                  "CLift"           : "LIFT"                    ,
                  "CDrag"           : "DRAG"                    ,
                  "CSideForce"      : "SIDEFORCE"               ,
@@ -224,7 +218,14 @@ def get_headerMap():
                  "D(CFz)"          : "D_FORCE_Z"               ,
                  "D(CL/CD)"        : "D_EFFICIENCY"            ,
                  "ComboObj"        : "COMBO"}
-    
+     
+
+def get_headerMap():
+    """ returns a dictionary that maps history file header names
+        to optimization problem function names
+    """
+    # header name to config file name map
+    map_dict = history_header_map
     return map_dict
 
 #: def get_headerMap()
@@ -361,6 +362,39 @@ grad_names_map = { "LIFT"      : "D_LIFT"           ,
                    "FORCE_Y"   : "D_FORCE_Y"     ,
                    "FORCE_Z"   : "D_FORCE_Z"     ,
                    "EFFICIENCY" : "D_EFFICIENCY"}
+
+# per-surface functions
+per_surface_map = {"LIFT"       :   "CLift" ,
+                  "DRAG"        :   "CDrag" ,
+                  "SIDEFORCE"   :   "CSideForce"  ,
+                  "MOMENT_X"    :   "CMx"   ,
+                  "MOMENT_Y"    :   "CMy"   ,
+                  "MOMENT_Z"    :   "CMz"   ,
+                  "FORCE_X"     :   "CFx"   ,
+                  "FORCE_Y"     :   "CFy"   ,
+                  "FORCE_Z"     :   "CFz"   ,
+                  "EFFICIENCY"  :   "CL/CD" }
+
+# -------------------------------------------------------------------
+#  Include per-surface output from History File
+# ------------------------------------------------------------------- 
+def update_persurface(config, state):
+    header_map = get_headerMap()
+    for base in per_surface_map:
+        base2 = per_surface_map[base]
+        for obj in config['OPT_OBJECTIVE']:
+            marker = config['OPT_OBJECTIVE'][obj]['MARKER']
+            if not header_map.has_key(base2+'_'+marker):
+                header_map[base2+'_'+marker] = base2+'_'+marker
+
+    if state['HISTORY'].has_key('DIRECT'):
+        for base in per_surface_map:
+            base2 = per_surface_map[base]
+            for obj in config['OPT_OBJECTIVE']:
+                marker = config['OPT_OBJECTIVE'][obj]['MARKER']
+                if state['HISTORY']['DIRECT'].has_key(base2+'_'+marker):
+                    state['FUNCTIONS'][base2+'_'+marker] = state['HISTORY']['DIRECT'][base2+'_'+marker][-1]
+                    
 # -------------------------------------------------------------------
 #  Read Aerodynamic Function Values from History File
 # -------------------------------------------------------------------
