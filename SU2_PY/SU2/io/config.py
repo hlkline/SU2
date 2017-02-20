@@ -514,7 +514,7 @@ def read_config(filename):
                     if (len(data_dict['MARKER_MONITORING'])>1):
                         this_def[this_name]['MARKER'] = data_dict['MARKER_MONITORING'][len(this_def)-1]
                     else:
-                        this_def[this_name]['MARKER'] = data_dict['MARKER_MONITORING']
+                        this_def[this_name]['MARKER'] = data_dict['MARKER_MONITORING'][0]
 
                 # save to output dictionary
                 data_dict[this_param] = this_def
