@@ -3795,11 +3795,11 @@ protected:
   OneD_TotalPress, /*!< \brief average total pressure evaluated at an exit */
   OneD_Mach, /*!< \brief area average Mach evaluated at an exit */
   OneD_Temp, /*!< \brief area average Temperature evaluated at an exit */
-  OneD_Pressure1D, /*!< \brief area average Pressure evaluated at an exit */
+  OneD_Pressure, /*!< \brief area average Pressure evaluated at an exit */
   OneD_MassFlowRate, /*!< \brief Mass flow rate at an exit */
-  OneD_Density1D, /*!< \brief one-dimensionalized density evaluated at an exit */
-  OneD_Enthalpy1D, /*!< \brief one-dimensionalized enthalpy evaluated at an exit */
-  OneD_Velocity1D, /*!< \brief one-dimensionalized velocity evaluated at an exit */
+  OneD_Density, /*!< \brief one-dimensionalized density evaluated at an exit */
+  OneD_Enthalpy, /*!< \brief one-dimensionalized enthalpy evaluated at an exit */
+  OneD_Velocity, /*!< \brief one-dimensionalized velocity evaluated at an exit */
   Total_ComboObj, /*!< \brief Total 'combo' objective for all monitored boundaries */
   AoA_Prev, /*!< \brief Old value of the AoA for fixed lift mode. */
   Total_CD, /*!< \brief Total drag coefficient for all the boundaries. */
