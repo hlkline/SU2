@@ -3110,47 +3110,47 @@ public:
   
   /*!
    * \brief A virtual member.
-   * \ Get the one-dimensionalized pressure at a marker.(same as area averaged pressure)
+   * \ Get the one-dimensionalized pressure at a marker.
    */
   virtual su2double GetOneD_AvgPress(void);
   
   /*!
    * \brief A virtual member.
-   * \ Set the one-dimensionalized pressure at a marker. (same as area averaged pressure)
+   * \ Set the one-dimensionalized pressure at a marker.
    */
   virtual void SetOneD_AvgPress(su2double Pressure1D);
   /*!
    * \brief A virtual member.
-   * \ Get the one-dimensionalized density at a marker. (\f$ = (gamma/(gamma-1)) / ( Pref*(href-1/2 uref^2) \f$)
+   * \ Get the one-dimensionalized density at a marker.
    */
   virtual su2double GetOneD_AvgDensity(void);
   
   /*!
    * \brief A virtual member.
-   * \ Set the one-dimensionalized density at a marker.( \f$= (gamma/(gamma-1)) / ( Pref*(href-1/2 uref^2) \f$)
+   * \ Set the one-dimensionalized density at a marker.
    */
   virtual void SetOneD_AvgDensity(su2double Density1D);
   
   /*!
    * \brief A virtual member.
-   * \ Get the one-dimensionalized velocity at a marker. = \f$ \sqrt ( \frac{\int((rho*u)*u^2dA)}{\int(rho*u*dA) }) \f$
+   * \ Get the one-dimensionalized velocity at a marker
    */
   virtual su2double GetOneD_AvgVelocity(void);
   
   /*!
    * \brief A virtual member.
-   * \ Set the one-dimensionalized velocity at a marker. = \f$ \sqrt (  \frac{\int((rho*u)*u^2dA)}{\int(rho*u*dA) }) \f$
+   * \ Set the one-dimensionalized velocity at a marker
    */
   virtual void SetOneD_AvgVelocity(su2double Velocity1D);
   
   /*!
    * \brief A virtual member.
-   * \ Get the one-dimensionalized enthalpy at a marker. =\f$ \frac{ \int(rho*u*h dA) }{ \int(rho *u *dA )} \f$
+   * \ Get the one-dimensionalized enthalpy at a marker.
    */
   virtual su2double GetOneD_AvgEnthalpy(void);
   /*!
    * \brief A virtual member.
-   * \ Set the one-dimensionalized enthalpy at a marker. =\f$ \frac{ \int(rho*u*h dA) }{ \int(rho *u *dA ) }\f$
+   * \ Set the one-dimensionalized enthalpy at a marker.
    */
   virtual void SetOneD_AvgEnthalpy(su2double Enthalpy1D);
 
@@ -5932,42 +5932,42 @@ public:
   void SetOneD_MassFlowRate(su2double MassFlowRate);
   
   /*!
-   * \brief Get the one-dimensionalized pressure at a marker.(same as area averaged pressure)
+   * \brief Get the one-dimensionalized pressure at a marker.
    */
   su2double GetOneD_AvgPress(void);
   
   /*!
-   * \brief Set the one-dimensionalized pressure at a marker. (same as area averaged pressure)
+   * \brief Set the one-dimensionalized pressure at a marker.
    */
   void SetOneD_AvgPress(su2double Pressure1D);
   
   /*!
-   * \brief Get the one-dimensionalized density at a marker. ( = (gamma/(gamma-1)) / ( Pref*(href-1/2 uref^2) )
+   * \brief Get the one-dimensionalized density at a marker.
    */
   su2double GetOneD_AvgDensity(void);
   
   /*!
-   * \brief Set the one-dimensionalized density at a marker.( = (gamma/(gamma-1)) / ( Pref*(href-1/2 uref^2) )
+   * \brief Set the one-dimensionalized density at a marker.
    */
   void SetOneD_AvgDensity(su2double Density1D);
   
   /*!
-   * \brief Get the one-dimensionalized velocity at a marker. = \f$ \sqrt ( \int((rho*u)*u^2dA)/\int(rho*u*dA) )\f$
+   * \brief Get the one-dimensionalized velocity at a marker.
    */
   su2double GetOneD_AvgVelocity(void);
   
   /*!
-   * \brief Set the one-dimensionalized velocity at a marker. =\f$ sqrt ( \int((rho*u)*u^2dA)/\int(rho*u*dA) ) \f$
+   * \brief Set the one-dimensionalized velocity at a marker.
    */
   void SetOneD_AvgVelocity(su2double Velocity1D);
   
   /*!
-   * \brief Get the one-dimensionalized enthalpy at a marker. = \f$ \int(rho*u*h dA) / \int(rho *u *dA ) \f$
+   * \brief Get the one-dimensionalized enthalpy at a marker.
    */
   su2double GetOneD_AvgEnthalpy(void);
   
   /*!
-   * \brief Set the one-dimensionalized enthalpy at a marker. =\f$ \int(rho*u*h dA) / \int(rho *u *dA ) \f$
+   * \brief Set the one-dimensionalized enthalpy at a marker.
    */
   void SetOneD_AvgEnthalpy(su2double Enthalpy1D);
   
