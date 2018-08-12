@@ -61,6 +61,9 @@ slurm_job = 'SLURM_JOBID' in os.environ
 # Check for custom mpi command
 user_defined = 'SU2_MPI_COMMAND' in os.environ
 
+# Check for custom mpi command
+user_defined = os.environ.has_key('SU2_MPI_COMMAND')
+
 # set mpi command
 if user_defined:
     mpi_Command = os.environ['SU2_MPI_COMMAND']
