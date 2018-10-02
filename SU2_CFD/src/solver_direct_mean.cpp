@@ -4281,9 +4281,9 @@ void CEulerSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container
   unsigned short kind_row_dissipation = config->GetKind_RoeLowDiss();
   bool roe_low_dissipation  = (kind_row_dissipation != NO_ROELOWDISS) && (config->GetKind_Upwind_Flow() == ROE);
 
-  /*--- Update the angle of attack at the far-field for fixed CL calculations. ---*/
+  /*--- Update the angle of attack at the far-field for fixed CL calculations (only direct problem). ---*/
   
-  if (fixed_cl) { SetFarfield_AoA(geometry, solver_container, config, iMesh, Output); }
+  if ((fixed_cl) && (!disc_adjoint) && (!cont_adjoint)) { SetFarfield_AoA(geometry, solver_container, config, iMesh, Output); }
 
   /*--- Set the primitive variables ---*/
   
@@ -8544,7 +8544,7 @@ void CEulerSolver::SetFarfield_AoA(CGeometry *geometry, CSolver **solver_contain
       AoA_FD_Change = true;
     }
     
-    if ((rank == MASTER_NODE) && (iMesh == MESH_0) && !config->GetDiscrete_Adjoint()) {
+    if ((rank == MASTER_NODE) && (iMesh == MESH_0)) {
       
     	if (config->GetnExtIter()-Iter_dCL_dAlpha == ExtIter) {
        cout << endl << "----------------------------- Fixed CL Mode -----------------------------" << endl;
@@ -8693,6 +8693,7 @@ void CEulerSolver::SetInletAtVertex(su2double *val_inlet,
 su2double CEulerSolver::GetInletAtVertex(su2double *val_inlet,
                                          unsigned long val_inlet_point,
                                          unsigned short val_kind_marker,
+                                         string val_marker,
                                          CGeometry *geometry,
                                          CConfig *config) {
   
@@ -8712,7 +8713,8 @@ su2double CEulerSolver::GetInletAtVertex(su2double *val_inlet,
   if (val_kind_marker == INLET_FLOW) {
     
     for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
-      if (config->GetMarker_All_KindBC(iMarker) == INLET_FLOW) {
+      if ((config->GetMarker_All_KindBC(iMarker) == INLET_FLOW) &&
+          (config->GetMarker_All_TagBound(iMarker) == val_marker)) {
         
         for (iVertex = 0; iVertex < nVertex[iMarker]; iVertex++){
           
@@ -12868,15 +12870,13 @@ void CEulerSolver::BC_ActDisk(CGeometry *geometry, CSolver **solver_container, C
       Target_Temp_Jump = GetActDisk_DeltaT(val_marker, iVertex);
       
       if (val_inlet_surface) {
-        V_inlet  = GetCharacPrimVar(val_marker, iVertex);
+        V_inlet  = node[iPoint]->GetPrimitive();
         V_outlet = GetDonorPrimVar(val_marker, iVertex);
         
-        //Temperature_out = V_outlet[0];
         Pressure_out    = V_outlet[nDim+1];
         Density_out     = V_outlet[nDim+2];
         SoundSpeed_out  = sqrt(Gamma*Pressure_out/Density_out);
         
-        //Temperature_in = V_inlet[0];
         Pressure_in    = V_inlet[nDim+1];
         Density_in     = V_inlet[nDim+2];
         SoundSpeed_in  = sqrt(Gamma*Pressure_in/Density_in);
@@ -12907,15 +12907,13 @@ void CEulerSolver::BC_ActDisk(CGeometry *geometry, CSolver **solver_container, C
         else       { P_static = V_outlet[nDim+1] - Target_Press_Jump; T_static = V_outlet[0] - Target_Temp_Jump; }
       }
       else {
-        V_outlet = GetCharacPrimVar(val_marker, iVertex);
+        V_outlet = node[iPoint]->GetPrimitive();
         V_inlet  = GetDonorPrimVar(val_marker, iVertex);
         
-        //Temperature_out = V_outlet[0];
         Pressure_out    = V_outlet[nDim+1];
         Density_out     = V_outlet[nDim+2];
         SoundSpeed_out  = sqrt(Gamma*Pressure_out/Density_out);
         
-        //Temperature_in = V_inlet[0];
         Pressure_in    = V_inlet[nDim+1];
         Density_in     = V_inlet[nDim+2];
         SoundSpeed_in  = sqrt(Gamma*Pressure_in/Density_in);
@@ -14056,6 +14054,7 @@ void CEulerSolver::LoadRestart(CGeometry **geometry, CSolver ***solver, CConfig 
     geometry[MESH_0]->SetCoord_CG();
     geometry[MESH_0]->SetControlVolume(config, UPDATE);
     geometry[MESH_0]->SetBoundControlVolume(config, UPDATE);
+    geometry[MESH_0]->SetMaxLength(config);
 
     /*--- Update the multigrid structure after setting up the finest grid,
      including computing the grid velocities on the coarser levels. ---*/
@@ -14066,6 +14065,7 @@ void CEulerSolver::LoadRestart(CGeometry **geometry, CSolver ***solver, CConfig 
       geometry[iMesh]->SetBoundControlVolume(config, geometry[iMeshFine],UPDATE);
       geometry[iMesh]->SetCoord(geometry[iMeshFine]);
       geometry[iMesh]->SetRestricted_GridVelocity(geometry[iMeshFine], config);
+      geometry[iMesh]->SetMaxLength(config);
       }
     }
 
@@ -14083,6 +14083,7 @@ void CEulerSolver::LoadRestart(CGeometry **geometry, CSolver ***solver, CConfig 
     geometry[MESH_0]->SetCoord_CG();
     geometry[MESH_0]->SetControlVolume(config, UPDATE);
     geometry[MESH_0]->SetBoundControlVolume(config, UPDATE);
+    geometry[MESH_0]->SetMaxLength(config);
 
     /*--- Update the multigrid structure after setting up the finest grid,
      including computing the grid velocities on the coarser levels. ---*/
@@ -14092,6 +14093,7 @@ void CEulerSolver::LoadRestart(CGeometry **geometry, CSolver ***solver, CConfig 
       geometry[iMesh]->SetControlVolume(config, geometry[iMeshFine], UPDATE);
       geometry[iMesh]->SetBoundControlVolume(config, geometry[iMeshFine],UPDATE);
       geometry[iMesh]->SetCoord(geometry[iMeshFine]);
+      geometry[iMesh]->SetMaxLength(config);
     }
   }
   
@@ -16082,9 +16084,9 @@ void CNSSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container, C
   bool roe_low_dissipation  = (kind_row_dissipation != NO_ROELOWDISS) && (config->GetKind_Upwind_Flow() == ROE);
   bool wall_functions       = config->GetWall_Functions();
 
-  /*--- Update the angle of attack at the far-field for fixed CL calculations. ---*/
+  /*--- Update the angle of attack at the far-field for fixed CL calculations (only direct problem). ---*/
   
-  if (fixed_cl) { SetFarfield_AoA(geometry, solver_container, config, iMesh, Output); }
+  if ((fixed_cl) && (!disc_adjoint) && (!cont_adjoint)) { SetFarfield_AoA(geometry, solver_container, config, iMesh, Output); }
   
   /*--- Set the primitive variables ---*/
   
@@ -17542,17 +17544,11 @@ void CNSSolver::SetRoe_Dissipation(CGeometry *geometry, CConfig *config){
       }
       
       node[iPoint]->SetRoe_Dissipation_FD(wall_distance);
-    }
-    
-    if (kind_roe_dissipation == NTS || kind_roe_dissipation == NTS_DUCROS){
-      /*--- XXX: This grid length does not match the original paper.
-       * Here we use the volume-based grid length,
-       *    delta = (delta_x * delta_y * delta_z)^(1/3)
-       * as an approximation for Travin's max-based grid length,
-       *    delta = max(delta_x, delta_y, delta_z)
-       * Since the volume is already computed, using the volume is much faster.
-       * ---*/
-      const su2double delta = pow(geometry->node[iPoint]->GetVolume(), 1.0/3);
+
+    } else if (kind_roe_dissipation == NTS || kind_roe_dissipation == NTS_DUCROS) {
+
+      const su2double delta = geometry->node[iPoint]->GetMaxLength();
+      assert(delta > 0); // Delta must be initialized and non-negative
       node[iPoint]->SetRoe_Dissipation_NTS(delta, config->GetConst_DES());
     }
   }
